@@ -1,0 +1,97 @@
+/**
+ * Tailwind CSS base styles
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * 🌃 CYBERPUNK THEME VARIABLES
+ */
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 10, 10, 15;
+  --neon-pink: #FF006E;
+  --neon-cyan: #00F0FF;
+  --neon-purple: #B026FF;
+  --neon-yellow: #FFFF00;
+  --neon-green: #39FF14;
+}
+
+/**
+ * Base styles - CYBERPUNK
+ */
+@layer base {
+  body {
+    @apply bg-cyber-bg text-white;
+    @apply min-h-screen antialiased;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Cyberpunk focus styles */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-neon-cyan;
+  }
+}
+
+/**
+ * Custom utility classes - CYBERPUNK
+ */
+@layer utilities {
+  /* Container with padding */
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Neon gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-neon-pink via-neon-purple to-neon-cyan bg-clip-text text-transparent;
+  }
+
+  /* Neon glow shadows */
+  .glow-pink {
+    box-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 10px var(--neon-purple), 0 0 20px var(--neon-purple);
+  }
+}
+
+/**
+ * Component styles - CYBERPUNK
+ */
+@layer components {
+  /* Neon button styles */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all font-mono;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-neon {
+    @apply bg-gradient-to-r from-neon-pink to-neon-purple text-white;
+    @apply border-2 border-neon-pink hover:shadow-neon-pink;
+  }
+
+  .btn-cyber {
+    @apply bg-cyber-card text-neon-cyan border-2 border-neon-cyan;
+    @apply hover:bg-cyber-darker hover:shadow-neon-cyan;
+  }
+
+  /* Cyberpunk input styles */
+  .input {
+    @apply block w-full rounded-lg border-2 border-cyber-border bg-cyber-darker px-4 py-2 text-white font-mono;
+    @apply focus:border-neon-cyan focus:shadow-neon-cyan;
+    @apply disabled:bg-cyber-bg disabled:cursor-not-allowed;
+  }
+}
