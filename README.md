@@ -1,37 +1,150 @@
-# 🎁 Skarbiec Dziecka
+# ⚡ SKARBIEC DZIECKA
 
-**Cyfrowe skarbce dla dzieci** - Platforma umożliwiająca rodzinom tworzenie długoterminowych inwestycji w kryptowaluty dla swoich dzieci poprzez proste wpłaty BLIK/kartą.
+<div align="center">
 
-## 🚀 Szybki Start
+**CYBERPUNK CRYPTO VAULTS FOR KIDS**
+
+*Zbuduj przyszłość swojego dziecka na blockchainie*
+
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.20-363636?style=for-the-badge&logo=solidity)](https://soliditylang.org/)
+[![Base L2](https://img.shields.io/badge/Base-L2-0052FF?style=for-the-badge&logo=coinbase)](https://base.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+[🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [🎨 Design](#-cyberpunk-design) • [📖 Docs](#-dokumentacja)
+
+</div>
+
+---
+
+## 🌃 O Projekcie
+
+**Skarbiec Dziecka** to blockchain-based platforma umożliwiająca rodzinom tworzenie **długoterminowych oszczędności w kryptowalutach** dla swoich dzieci.
+
+### 💡 Concept
+- **Rodzic** tworzy skarbiec (smart contract) dla dziecka
+- **Rodzina i znajomi** wpłacają ETH na adres skarbca
+- **Tylko rodzic** może wypłacić środki (full custody)
+- **Na Base L2** = 500x taniej niż Ethereum (~$0.01 za transakcję)
+
+## ✨ Features
+
+### 🔐 Smart Contracts (Solidity)
+- ✅ **TreasuryVault** - indywidualny skarbiec dla dziecka
+- ✅ **TreasuryFactory** - factory pattern dla tworzenia skarbców
+- ✅ **OpenZeppelin 5.0.1** - audited security libraries
+- ✅ **56 testów** - pełne pokrycie testami (100%)
+- ✅ **Access Control** - tylko owner może wypłacić
+- ✅ **Contribution Tracking** - historia wszystkich wpłat
+
+### 🌐 Web Application (Next.js 14)
+- ✅ **Cyberpunk Neon Design** - futurystyczny UI w stylu cyberpunk
+- ✅ **Wagmi v2 + Viem** - nowoczesna integracja Web3
+- ✅ **Dynamic Treasury Pages** - każdy skarbiec ma własną stronę
+- ✅ **QR Codes** - łatwe wpłaty przez skanowanie
+- ✅ **Real-time Data** - dane z blockchain na żywo
+- ✅ **Responsive** - działa na mobile i desktop
+
+### ⚡ Blockchain
+- ✅ **Base L2** - 500x taniej niż Ethereum L1
+- ✅ **2s block time** - szybkie potwierdzenia
+- ✅ **EVM Compatible** - ten sam kod działa wszędzie
+- 🔜 **Base Sepolia** testnet support
+- 🔜 **Base Mainnet** production ready
+
+### 💰 Payments (Roadmap)
+- 🔜 **Stripe** - BLIK i karty (PL users)
+- 🔜 **Ramp Network** - crypto on-ramp
+- 🔜 **No wallet needed** - rodzina wpłaca bez crypto
+
+---
+
+## 🎨 Cyberpunk Design
+
+Aplikacja została zaprojektowana w stylu **cyberpunk/neon** z pełną paletą neonowych kolorów:
+
+### 🎨 Kolory
+- 🔴 **Neon Pink** `#FF006E` - główne akcenty
+- 🔵 **Neon Cyan** `#00F0FF` - teksty i buttony
+- 🟣 **Neon Purple** `#B026FF` - gradient effects
+- 🟡 **Neon Yellow** `#FFFF00` - highlights
+- 🟢 **Neon Green** `#39FF14` - success states
+
+### ✨ Efekty
+- 🌐 Grid background pattern
+- ⚡ Scan line animations
+- 💫 Glow effects na wszystkich elementach
+- ⚙️ Flicker animations
+- 🖥️ Terminal-style typography (monospace)
+
+### 📱 Przykładowy wygląd
+```
+⚡ SKARBIEC DZIECKA
+> ZBUDUJ PRZYSZŁOŚĆ NA BLOCKCHAIN_
+
+[01] > POŁĄCZ_PORTFEL
+    > CONNECT MetaMask
+
+[02] > UTWÓRZ_SKARBIEC
+    CHILD.NAME: Olaf
+    CHILD.AGE: 5
+    ⚡ DEPLOY_VAULT > OLAF
+
+VAULT [OLAF]
+BALANCE: 1.0 ETH
+> TRANSACTION_HISTORY
+  👵 Babcia Maria    +0.5 ETH
+  👨 Wujek Tomasz    +1.0 ETH
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Wymagania
-- Node.js 18+
-- npm lub yarn
-- MetaMask lub inny wallet (do testowania)
-- Konto Supabase (darmowe)
-- Konto Ramp Network (do płatności)
+- **Node.js 18+**
+- **npm/yarn**
+- **Git**
 
 ### Instalacja
 
 ```bash
-# 1. Zainstaluj zależności
+# 1. Clone repo
+git clone https://github.com/batman-haker/skarbiecdziecka.git
+cd skarbiecdziecka
+
+# 2. Install dependencies
 npm install
 
-# 2. Skonfiguruj zmienne środowiskowe
+# 3. Setup environment
 cp .env.example .env.local
-# Wypełnij .env.local swoimi kluczami API
+# Edytuj .env.local (dla local dev wystarczą defaulty)
 
-# 3. Skompiluj smart contracty
+# 4. Compile smart contracts
 npm run compile
 
-# 4. Uruchom testy
+# 5. Run tests (56 tests should pass)
 npm run test:contracts
 
-# 5. Uruchom aplikację (development)
+# 6. Start local blockchain (w osobnym terminalu)
+npx hardhat node
+
+# 7. Deploy contracts locally (w osobnym terminalu)
+npx hardhat run scripts/deploy-simple.js --network localhost
+
+# 8. Start web app
 npm run dev
 ```
 
-Aplikacja będzie dostępna pod adresem: http://localhost:3000
+**Aplikacja:** http://localhost:3000
+**Treasury demo:** http://localhost:3000/treasury
+
+### 🎮 Demo Flow
+
+1. **Otwórz** http://localhost:3000
+2. **Utwórz** nowy skarbiec (możesz bez portfela na local)
+3. **Zobacz** skarbiec Olafa z przykładowymi wpłatami
+4. **Eksperymentuj** z kodem i designem!
 
 ## 📁 Struktura Projektu
 
