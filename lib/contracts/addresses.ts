@@ -11,9 +11,9 @@ export const CONTRACTS_LOCAL = {
   rpcUrl: 'http://127.0.0.1:8545',
 } as const;
 
-// Base Sepolia testnet (gdy zdeployujemy później)
+// Base Sepolia testnet ✅ DEPLOYED!
 export const CONTRACTS_BASE_SEPOLIA = {
-  TreasuryFactory: '0x0000000000000000000000000000000000000000', // TODO: zaktualizuj po deploymencie
+  TreasuryFactory: '0x7c038a44De3b8AD648856b64f605D82da462230f', // Deployed 2025-12-18
   chainId: 84532,
   rpcUrl: 'https://sepolia.base.org',
 } as const;
