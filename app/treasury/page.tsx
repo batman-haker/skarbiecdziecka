@@ -28,6 +28,15 @@ const CONTRIBUTION_COLORS = [
   'from-yellow-50 to-amber-50 border-yellow-200',
 ];
 
+// Type for contribution data returned from smart contract
+type ContributionData = readonly [
+  string, // contributor address
+  bigint, // amount
+  string, // relation
+  bigint, // timestamp
+  string  // contributorName
+];
+
 // Component dla pojedynczej wpłaty - CYBERPUNK STYLE
 function ContributionItem({ treasuryAddress, index }: { treasuryAddress: `0x${string}`, index: number }) {
   const { data: contribution } = useReadContract({
@@ -35,7 +44,7 @@ function ContributionItem({ treasuryAddress, index }: { treasuryAddress: `0x${st
     abi: TreasuryVaultABI,
     functionName: 'getContribution',
     args: [BigInt(index)],
-  });
+  }) as { data: ContributionData | undefined };
 
   if (!contribution) {
     return (

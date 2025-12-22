@@ -12,7 +12,9 @@
     "test": "hardhat test",
     "test:contracts": "hardhat test",
     "deploy:testnet": "hardhat run scripts/deploy.ts --network baseSepolia",
-    "deploy:mainnet": "hardhat run scripts/deploy.ts --network base"
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network base",
+    "generate-relay-wallet": "node scripts/generate-relay-wallet.js",
+    "check-relay-balance": "node scripts/check-relay-balance.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

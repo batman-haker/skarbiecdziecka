@@ -1,13 +1,13 @@
 # 📍 AKTUALNY STAN PROJEKTU - Session 2025-12-22
 
 > **Ważne**: Ten dokument zawiera aktualny stan projektu i plan dalszych działań.
-> Ostatnia aktualizacja: 2025-12-22 (evening) ✅ PHASE 2 COMPLETE!
+> Ostatnia aktualizacja: 2025-12-22 (late evening) ✅ PHASE 3 COMPLETE!
 
 ---
 
-## 🎯 OBECNY STATUS - PHASE 2 (100% COMPLETE!) 🎉
+## 🎯 OBECNY STATUS - PHASE 3 (93% COMPLETE!) 🎉
 
-### ✅ CO MAMY GOTOWE (11/14 tasków - 79%)
+### ✅ CO MAMY GOTOWE (13/14 tasków - 93%)
 
 1. **Supabase Setup** ✅
    - Projekt: `skarbiecdziecka` (ID: rovomjqllcwvgekrftkf)
@@ -66,18 +66,20 @@
    - Dashboard redirect: DZIAŁA ✅
    - User profile display: DZIAŁA ✅
 
-### ❌ CO JESZCZE TRZEBA ZROBIĆ (3/14 tasków)
+12. **Backend Relay Wallet** ✅
+   - Wallet wygenerowany: `0x9C463AcBd01D9ab7f37423f07873F3A92e98D6b1`
+   - Private key dodany do `.env.local`
+   - `lib/wallet/relay.ts` utworzony
+   - Scripts: `npm run generate-relay-wallet`, `npm run check-relay-balance`
+   - ⚠️ Wallet needs funding: https://www.alchemy.com/faucets/base-sepolia
 
-12. **Backend Relay Wallet** ❌ TODO
-   - Wygenerować nowy wallet (ethers.Wallet.createRandom())
-   - Zasilić z testnet faucet (0.1 ETH)
-   - Dodać private key do `.env.local`
-   - Utworzyć `lib/wallet/relay.ts`
+13. **Backend API** ✅
+   - `POST /api/treasury/create` - tworzy skarbiec przez relay wallet ✅
+   - `GET /api/my-treasuries` - pobiera skarbce użytkownika ✅
+   - `GET /api/relay-status` - sprawdza status relay wallet ✅
+   - All routes compiled successfully ✅
 
-13. **Backend API** ❌ TODO
-   - `app/api/treasury/create/route.ts` - tworzenie skarbca (relay)
-   - `app/api/my-treasuries/route.ts` - lista skarbców usera
-   - `lib/treasury/service.ts` - business logic
+### ❌ CO JESZCZE TRZEBA ZROBIĆ (1/14 tasków)
 
 14. **Full End-to-End Testing** ❌ TODO
     - Test: Login flow
@@ -253,43 +255,132 @@ skarbiecdziecka/
 
 ---
 
-## 📋 NASTĘPNE KROKI (WHEN YOU RETURN)
+## 🎊 CO ZROBILIŚMY W TEJ SESJI (Phase 3)
 
-### Krok 10: Backend Relay Wallet
+### ✅ Task #12: Backend Relay Wallet
 
-Utworzymy wallet który będzie:
-- Tworzyć skarbce za użytkowników (relay)
-- Płacić za gas (~$0.30 per treasury)
-- Być zabezpieczony (private key w env vars)
+**Utworzone pliki:**
+- `lib/wallet/relay.ts` - główny serwis relay walleta
+- `scripts/generate-relay-wallet.js` - generator nowego walleta
+- `scripts/check-relay-balance.js` - sprawdzanie balansu
 
-**Komenda do wygenerowania**:
-```javascript
-const wallet = ethers.Wallet.createRandom()
-console.log('Address:', wallet.address)
-console.log('Private Key:', wallet.privateKey) // ZAPISZ TO!
+**Funkcjonalności:**
+1. `getRelayWallet()` - zwraca instancję walleta z private key z env
+2. `getTreasuryFactoryContract()` - zwraca kontrakt TreasuryFactory
+3. `createTreasuryViaRelay()` - tworzy skarbiec na blockchain (płaci gas)
+4. `getRelayWalletBalance()` - sprawdza balance walleta
+5. `estimateCreateTreasuryGas()` - szacuje koszt gas
+
+**Wallet Details:**
+```
+Address: 0x9C463AcBd01D9ab7f37423f07873F3A92e98D6b1
+Balance: 0.0 ETH (needs funding!)
+Network: Base Sepolia (ChainID: 84532)
 ```
 
-### Krok 11: Backend API
+**NPM Scripts:**
+```bash
+npm run generate-relay-wallet  # Generuje nowy wallet
+npm run check-relay-balance    # Sprawdza balance
+```
 
-Utworzymy:
-- `POST /api/treasury/create` - backend relay tworzy contract
-- `GET /api/my-treasuries` - lista skarbców usera
+### ✅ Task #13: Backend API
 
-### Krok 12: Dashboard
+**Utworzone endpointy:**
 
-Utworzymy frontend gdzie user:
-- Widzi listę swoich skarbców
-- Może utworzyć nowy skarbiec (formularz)
-- Widzi balance i history
+1. **POST /api/treasury/create**
+   - Tworzy nowy skarbiec używając relay walleta
+   - Weryfikuje auth (tylko zalogowani)
+   - Waliduje dane wejściowe (childName, childBirthDate)
+   - Zapisuje do bazy danych
+   - Tworzy powiadomienie
+   - Response: `{ success, treasury: { id, address, txHash, ... } }`
 
-### Krok 13: End-to-End Test
+2. **GET /api/my-treasuries**
+   - Pobiera wszystkie skarbce zalogowanego usera
+   - Sortuje po dacie utworzenia (desc)
+   - Response: `{ success, count, treasuries: [...] }`
 
-Przetestujemy cały flow:
-1. Login przez Google ✅
-2. Create treasury (z backend relay)
-3. View treasury
-4. Deposit ETH (przez MetaMask)
-5. Withdraw ETH (owner only)
+3. **GET /api/relay-status**
+   - Sprawdza status relay walleta
+   - Pokazuje balance, adres, network
+   - Szacuje ile skarbców można jeszcze utworzyć
+   - Response: `{ success, relay: { address, balance, status, ... } }`
+
+**Bezpieczeństwo:**
+- ✅ Wszystkie endpointy wymagają autentykacji
+- ✅ Walidacja wszystkich inputów
+- ✅ Private key tylko w env vars (server-side)
+- ✅ Rate limiting (TODO: dodać w middleware)
+
+### ✅ Fixes & Improvements
+
+**TypeScript Errors Fixed:**
+1. `next.config.js` - usunięto deprecated `experimental.serverActions`
+2. `hardhat.config.ts` - usunięto nieprawidłowe `verify` property
+3. `lib/wallet/relay.ts` - poprawiono importy ABI
+4. `lib/wallet/relay.ts` - dodano `!` dla `wallet.provider`
+5. `app/treasury/page.tsx` - dodano type dla `ContributionData`
+
+**Build Status:**
+```
+✅ Build Successful!
+✅ All routes compiled
+✅ No TypeScript errors
+⚠️  Warnings: MetaMask SDK dependencies (optional, not critical)
+```
+
+---
+
+## 📋 NASTĘPNE KROKI (WHEN YOU RETURN)
+
+### ⚡ KRYTYCZNE: Zasilenie Relay Wallet
+
+**UWAGA**: Relay wallet ma 0 ETH i wymaga zasilenia przed testowaniem!
+
+```
+Address: 0x9C463AcBd01D9ab7f37423f07873F3A92e98D6b1
+Faucet: https://www.alchemy.com/faucets/base-sepolia
+Ilość: 0.1 ETH (wystarczy na ~100 skarbców)
+```
+
+**Jak zasilić:**
+1. Otwórz: https://www.alchemy.com/faucets/base-sepolia
+2. Wklej adres: `0x9C463AcBd01D9ab7f37423f07873F3A92e98D6b1`
+3. Wybierz: Base Sepolia
+4. Kliknij: "Send Me ETH"
+5. Sprawdź balance: `npm run check-relay-balance`
+
+### Krok 14: Full End-to-End Testing
+
+Po zasileniu relay wallet, przetestuj cały flow:
+
+**Test 1: Podstawowy flow (bez wallet)**
+1. ✅ Login przez Google (już działa)
+2. ⏸️ User próbuje utworzyć skarbiec (powinien dostać błąd: "connect wallet first")
+
+**Test 2: Pełny flow (z wallet)**
+1. ✅ Login przez Google
+2. ⏸️ User podłącza MetaMask wallet
+3. ⏸️ User tworzy skarbiec (POST /api/treasury/create)
+4. ⏸️ Relay wallet tworzy contract na blockchain
+5. ⏸️ Skarbiec pojawia się na dashboard
+6. ⏸️ User może wpłacić ETH na skarbiec
+7. ⏸️ Owner może wypłacić ETH ze skarbca
+
+**Test 3: Edge cases**
+- Próba utworzenia skarbca bez logowania (401)
+- Próba utworzenia skarbca z nieprawidłowymi danymi (400)
+- Sprawdzenie czy RLS działa (user widzi tylko swoje skarbce)
+
+### Krok 15: Dashboard Enhancement (Optional)
+
+Obecnie dashboard pokazuje tylko user info. Można dodać:
+- Lista skarbców (fetch z /api/my-treasuries)
+- Formularz do tworzenia skarbca
+- Balance każdego skarbca
+- Historia transakcji
+- QR code do wpłat
 
 ---
 
@@ -379,7 +470,12 @@ cat .env.local | grep SUPABASE
 
 **Made with ❤️ in Poland** 🇵🇱
 
-> Session zakończona: 2025-12-22, evening
-> Status: Phase 2 (100% COMPLETE!) 🎉
+> Session zakończona: 2025-12-22, late evening
+> Status: Phase 3 (93% COMPLETE!) 🎉
+> Completed: Backend Relay Wallet (#12) + Create Treasury API (#13)
 > Tested with: jonbatman99@gmail.com
-> Next session: Backend Relay Wallet (#12) + Create Treasury API (#13)
+> Next session: Fund relay wallet + End-to-End Testing (#14)
+>
+> **CRITICAL**: Relay wallet needs funding before testing!
+> Address: `0x9C463AcBd01D9ab7f37423f07873F3A92e98D6b1`
+> Faucet: https://www.alchemy.com/faucets/base-sepolia

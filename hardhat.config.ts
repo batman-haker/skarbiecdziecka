@@ -44,14 +44,7 @@ const config: HardhatUserConfig = {
       url: process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://sepolia.base.org",
       chainId: 84532,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      // Gas settings
       gasPrice: "auto",
-      // Verify on Basescan
-      verify: {
-        etherscan: {
-          apiUrl: "https://api-sepolia.basescan.org",
-        },
-      },
     },
 
     // Base Mainnet (Production)
@@ -60,11 +53,6 @@ const config: HardhatUserConfig = {
       chainId: 8453,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       gasPrice: "auto",
-      verify: {
-        etherscan: {
-          apiUrl: "https://api.basescan.org",
-        },
-      },
     },
   },
 

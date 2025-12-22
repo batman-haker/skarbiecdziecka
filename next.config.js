@@ -27,12 +27,6 @@ const nextConfig = {
     return config;
   },
 
-  // Experimental features
-  experimental: {
-    // Enable server actions (useful for form handling)
-    serverActions: true,
-  },
-
   // Environment variables that should be available on the client
   env: {
     NEXT_PUBLIC_APP_NAME: 'Skarbiec Dziecka',
