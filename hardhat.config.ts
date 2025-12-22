@@ -56,51 +56,12 @@ const config: HardhatUserConfig = {
     },
   },
 
-  // Etherscan API key for contract verification
-  etherscan: {
-    apiKey: {
-      baseSepolia: process.env.BASESCAN_API_KEY || "",
-      base: process.env.BASESCAN_API_KEY || "",
-    },
-    customChains: [
-      {
-        network: "baseSepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org",
-        },
-      },
-      {
-        network: "base",
-        chainId: 8453,
-        urls: {
-          apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org",
-        },
-      },
-    ],
-  },
-
   // Path configuration
   paths: {
     sources: "./contracts",
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts",
-  },
-
-  // Gas reporter (useful for optimization)
-  gasReporter: {
-    enabled: process.env.REPORT_GAS === "true",
-    currency: "PLN",
-    // coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-  },
-
-  // TypeChain configuration (generates TypeScript types for contracts)
-  typechain: {
-    outDir: "typechain-types",
-    target: "ethers-v6",
   },
 };
 
