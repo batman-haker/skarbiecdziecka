@@ -42,6 +42,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
         // Login methods
         loginMethods: ['email', 'google', 'wallet'],
+        // Embedded wallets - auto-create dla userów
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets',
+        },
         // Default chain
         defaultChain: baseSepolia,
         // Supported chains

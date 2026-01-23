@@ -17,7 +17,27 @@
       "Bash(git push:*)",
       "Bash(node scripts/generate-relay-wallet.js:*)",
       "Bash(npm run check-relay-balance:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(node scripts/verify-wallet.js:*)",
+      "Bash(node scripts/check-relay-balance.js:*)",
+      "Bash(curl:*)",
+      "Bash(node scripts/check-user-balance.js:*)",
+      "Bash(node scripts/send-welcome-eth-manual.js:*)",
+      "Bash(ls:*)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npm run dev:*)",
+      "Bash(start http://localhost:3000/dashboard)",
+      "Bash(start http://localhost:3005/dashboard)",
+      "Bash(start http://localhost:3006/dashboard)",
+      "Bash(timeout:*)",
+      "Bash(start http://localhost:3006)",
+      "Bash(ping:*)",
+      "Bash(ipconfig /flushdns)",
+      "Bash(cmd.exe /c ipconfig /flushdns)",
+      "Bash(start https://rovomjqllcwvgekrftkf.supabase.co)",
+      "Bash(start http://localhost:3001)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(test:*)"
     ]
   }
 }

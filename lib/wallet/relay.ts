@@ -12,9 +12,10 @@
 
 import { ethers } from 'ethers'
 import TreasuryFactoryABI from '@/lib/contracts/TreasuryFactory.json'
+import TreasuryVaultABI from '@/lib/contracts/TreasuryVault.json'
 
 // Contract addresses (from deployment)
-const TREASURY_FACTORY_ADDRESS = '0x6a8043CfB09C4BE4E94e98Ae0c3f1f09a7C15ceb'
+const TREASURY_FACTORY_ADDRESS = '0xF142387eB1EF4c0cE9Fd92C1A78919B134354387'
 
 // Base Sepolia RPC
 const BASE_SEPOLIA_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://sepolia.base.org'
@@ -51,7 +52,7 @@ export function getTreasuryFactoryContract(): ethers.Contract {
 
   const contract = new ethers.Contract(
     TREASURY_FACTORY_ADDRESS,
-    TreasuryFactoryABI,
+    TreasuryFactoryABI.abi,
     wallet
   )
 
@@ -95,7 +96,8 @@ export async function createTreasuryViaRelay(
 
     // Call createTreasury on factory contract
     // The relay wallet will pay for gas
-    const tx = await factoryContract.createTreasury(childName, childBirthDate, ownerAddress)
+    // Note: Contract sets owner as msg.sender (relay wallet), so we need to transfer ownership after
+    const tx = await factoryContract.createTreasury(childName, childBirthDate)
 
     console.log('[Relay] Transaction sent:', tx.hash)
     console.log('[Relay] Waiting for confirmation...')
@@ -127,6 +129,16 @@ export async function createTreasuryViaRelay(
     }
 
     console.log('[Relay] Treasury created at:', treasuryAddress)
+
+    // Transfer ownership from relay wallet to user's wallet
+    console.log('[Relay] Transferring ownership to user:', ownerAddress)
+    const treasuryContract = new ethers.Contract(treasuryAddress, TreasuryVaultABI.abi, wallet)
+
+    const transferTx = await treasuryContract.transferOwnership(ownerAddress)
+    console.log('[Relay] Transfer ownership transaction sent:', transferTx.hash)
+
+    await transferTx.wait()
+    console.log('[Relay] Ownership transferred successfully!')
 
     return {
       treasuryAddress,
@@ -193,5 +205,80 @@ export async function estimateCreateTreasuryGas(
     gasEstimate,
     gasPriceInGwei,
     estimatedCostInEth,
+  }
+}
+
+/**
+ * Send welcome ETH to a new user's wallet
+ * This is a "gas sponsorship" feature - gives new users a small amount of ETH
+ * so they can make transactions without needing to buy crypto first.
+ *
+ * @param recipientAddress - Address of the new user's wallet
+ * @param amount - Amount in ETH (default: 0.001 ETH)
+ * @returns Transaction hash
+ */
+export async function sendWelcomeETH(
+  recipientAddress: string,
+  amount: string = '0.001'
+): Promise<{ txHash: string; amountSent: string }> {
+  try {
+    const wallet = getRelayWallet()
+
+    console.log('[Relay] Sending welcome ETH...')
+    console.log('[Relay] Recipient:', recipientAddress)
+    console.log('[Relay] Amount:', amount, 'ETH')
+
+    // Check relay wallet balance
+    const balance = await wallet.provider!.getBalance(wallet.address)
+    const balanceInEth = ethers.formatEther(balance)
+    console.log('[Relay] Relay wallet balance:', balanceInEth, 'ETH')
+
+    const amountToSend = ethers.parseEther(amount)
+
+    if (balance < amountToSend) {
+      throw new Error(
+        `Relay wallet has insufficient balance: ${balanceInEth} ETH. Cannot send ${amount} ETH.`
+      )
+    }
+
+    // Check if recipient already has some ETH (avoid sending multiple times)
+    const recipientBalance = await wallet.provider!.getBalance(recipientAddress)
+    const recipientBalanceInEth = ethers.formatEther(recipientBalance)
+    console.log('[Relay] Recipient current balance:', recipientBalanceInEth, 'ETH')
+
+    // Skip if recipient already has ETH (they already received welcome ETH)
+    if (parseFloat(recipientBalanceInEth) > 0) {
+      console.log('[Relay] Recipient already has ETH, skipping welcome transfer')
+      return {
+        txHash: '',
+        amountSent: '0',
+      }
+    }
+
+    // Send ETH
+    const tx = await wallet.sendTransaction({
+      to: recipientAddress,
+      value: amountToSend,
+    })
+
+    console.log('[Relay] Welcome ETH transaction sent:', tx.hash)
+    console.log('[Relay] Waiting for confirmation...')
+
+    // Wait for confirmation
+    const receipt = await tx.wait()
+    console.log('[Relay] Welcome ETH confirmed in block:', receipt?.blockNumber)
+
+    return {
+      txHash: tx.hash,
+      amountSent: amount,
+    }
+  } catch (error: any) {
+    console.error('[Relay] Error sending welcome ETH:', error)
+    // Don't throw - we don't want to block wallet creation if welcome ETH fails
+    // Just log the error and return empty result
+    return {
+      txHash: '',
+      amountSent: '0',
+    }
   }
 }

@@ -62,7 +62,12 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
+  try {
+    await supabase.auth.getUser()
+  } catch (error) {
+    // Supabase offline/unavailable - allow app to continue
+    console.warn('[Middleware] Supabase unavailable:', error)
+  }
 
   return response
 }

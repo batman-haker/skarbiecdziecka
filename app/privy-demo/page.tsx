@@ -13,15 +13,43 @@ import { useEffect } from 'react'
 
 export default function PrivyDemoPage() {
   const router = useRouter()
-  const { ready, authenticated, user, login, logout } = usePrivy()
+  const { ready, authenticated, user, login, logout, createWallet } = usePrivy()
   const { wallets } = useWallets()
 
-  // Przykład: redirect zalogowanych do dashboard
+  // Auto-sync wallet to Supabase when detected
   useEffect(() => {
-    if (ready && authenticated && user) {
-      console.log('[Privy] User authenticated:', user)
-      console.log('[Privy] Wallets:', wallets)
+    const syncWalletToSupabase = async () => {
+      if (ready && authenticated && user && wallets.length > 0) {
+        const walletAddress = wallets[0].address
+        console.log('[Privy] User authenticated with wallet:', walletAddress)
+
+        try {
+          // Sync wallet address to Supabase profile
+          const response = await fetch('/api/sync-wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress }),
+          })
+
+          const data = await response.json()
+
+          if (data.success) {
+            console.log('[Privy] Wallet synced to Supabase:', data.walletAddress)
+          } else {
+            console.error('[Privy] Failed to sync wallet:', data.error)
+          }
+        } catch (err) {
+          console.error('[Privy] Error syncing wallet:', err)
+        }
+      }
+
+      if (ready && authenticated && user && wallets.length === 0) {
+        console.log('[Privy] User authenticated but no wallet found')
+        console.log('[Privy] Wallet will be auto-created when needed')
+      }
     }
+
+    syncWalletToSupabase()
   }, [ready, authenticated, user, wallets])
 
   if (!ready) {
@@ -134,9 +162,47 @@ export default function PrivyDemoPage() {
                   <p className="text-yellow-400 font-mono mb-4">
                     ⚠️ Wallet jeszcze nie utworzony
                   </p>
-                  <p className="text-gray-400 text-sm font-mono">
-                    Privy automatycznie utworzy wallet przy pierwszej transakcji
+                  <p className="text-gray-400 text-sm font-mono mb-6">
+                    Kliknij poniżej aby utworzyć swój embedded wallet.
                   </p>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={async () => {
+                        try {
+                          console.log('[Privy] Creating wallet...')
+                          if (createWallet) {
+                            await createWallet()
+                            console.log('[Privy] Wallet created successfully!')
+                          } else {
+                            // Fallback: reload page to trigger auto-creation
+                            console.log('[Privy] createWallet not available, reloading...')
+                            window.location.reload()
+                          }
+                        } catch (err) {
+                          console.error('[Privy] Error creating wallet:', err)
+                          alert('Błąd podczas tworzenia walleta. Spróbuj wylogować się i zalogować ponownie.')
+                        }
+                      }}
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg shadow-purple-500/50 font-mono"
+                    >
+                      ⚡ UTWÓRZ WALLET
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        logout()
+                        setTimeout(() => login(), 100)
+                      }}
+                      className="w-full border border-gray-600 text-gray-400 px-6 py-3 rounded-lg font-mono hover:bg-gray-700 transition-all"
+                    >
+                      🔄 LUB WYLOGUJ I ZALOGUJ PONOWNIE
+                    </button>
+
+                    <p className="text-xs text-gray-500 font-mono">
+                      (Wallet zostanie automatycznie utworzony)
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">

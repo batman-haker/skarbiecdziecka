@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     const { data: treasuries, error: dbError } = await supabase
       .from('treasuries')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('owner_user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (dbError) {
@@ -62,10 +62,9 @@ export async function GET(request: NextRequest) {
       address: treasury.contract_address,
       childName: treasury.child_name,
       childBirthDate: treasury.child_birth_date,
-      ownerAddress: treasury.owner_address,
-      balance: treasury.balance || '0',
-      totalContributions: treasury.total_contributions || '0',
-      totalWithdrawals: treasury.total_withdrawals || '0',
+      ownerAddress: treasury.owner_wallet_address,
+      balance: treasury.total_eth_balance?.toString() || '0',
+      totalContributions: treasury.total_contributions_count?.toString() || '0',
       createdAt: treasury.created_at,
       updatedAt: treasury.updated_at,
     }))

@@ -109,14 +109,13 @@ export async function POST(request: NextRequest) {
     const { data: treasury, error: dbError } = await supabase
       .from('treasuries')
       .insert({
-        user_id: user.id,
+        owner_user_id: user.id,
         contract_address: treasuryAddress,
         child_name: childName,
-        child_birth_date: new Date(childBirthDate * 1000).toISOString(),
-        owner_address: ownerAddress,
-        balance: '0',
-        total_contributions: '0',
-        total_withdrawals: '0',
+        child_birth_date: childBirthDate, // Store as Unix timestamp (BIGINT)
+        owner_wallet_address: ownerAddress,
+        total_eth_balance: 0,
+        total_contributions_count: 0,
       })
       .select()
       .single()

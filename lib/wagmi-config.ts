@@ -18,14 +18,9 @@ export const supportedChains = [
 export const wagmiConfig = createConfig({
   chains: supportedChains,
   connectors: [
-    // MetaMask, Coinbase Wallet, etc (przez browser extension)
-    injected({
-      target: 'metaMask',
-    }),
-    // WalletConnect (dla mobile wallets)
-    // walletConnect({
-    //   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-    // }),
+    // Browser wallets (MetaMask, Coinbase Wallet, etc)
+    // Użycie prostego injected() bez target - nie wymaga MetaMask SDK
+    injected(),
   ],
   transports: {
     [hardhat.id]: http('http://127.0.0.1:8545'),
