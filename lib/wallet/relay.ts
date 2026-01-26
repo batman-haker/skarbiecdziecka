@@ -188,8 +188,7 @@ export async function estimateCreateTreasuryGas(
   // Estimate gas
   const gasEstimate = await factoryContract.createTreasury.estimateGas(
     childName,
-    childBirthDate,
-    ownerAddress
+    childBirthDate
   )
 
   // Get current gas price

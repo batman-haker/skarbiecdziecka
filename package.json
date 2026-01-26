@@ -15,6 +15,7 @@
     "deploy:mainnet": "hardhat run scripts/deploy.ts --network base",
     "generate-relay-wallet": "node scripts/generate-relay-wallet.js",
     "check-relay-balance": "node scripts/check-relay-balance.js",
+    "test-welcome-eth": "node scripts/test-welcome-eth.js",
     "end-session": "node scripts/end-session.js"
   },
   "dependencies": {

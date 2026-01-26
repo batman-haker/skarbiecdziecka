@@ -37,7 +37,10 @@
       "Bash(start http://localhost:3001)",
       "Bash(node --version:*)",
       "Bash(npm --version:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(start http://localhost:3001/dashboard)",
+      "Bash(npm run test-welcome-eth:*)",
+      "Bash(start https://sepolia.basescan.org/tx/0xe6ac071def142cdd521d6f2ec6bceaf8ca1722b509fe105c4c189f4c3fafdd5e)"
     ]
   }
 }
