@@ -46,7 +46,7 @@ describe("TreasuryVault", function () {
     });
 
     it("Should set the correct birth date", async function () {
-      expect(await treasury.birthDate()).to.equal(birthDate);
+      expect(await treasury.birthDate()).to.equal(BigInt(birthDate));
     });
 
     it("Should set the deployer as owner", async function () {
@@ -54,7 +54,7 @@ describe("TreasuryVault", function () {
     });
 
     it("Should start with zero contributions", async function () {
-      expect(await treasury.getContributionsCount()).to.equal(0);
+      expect(await treasury.getContributionsCount()).to.equal(0n);
     });
 
     it("Should revert if child name is empty", async function () {
@@ -108,8 +108,8 @@ describe("TreasuryVault", function () {
         value: depositAmount,
       });
 
-      expect(await treasury.getContributionsCount()).to.equal(1);
-      expect(await treasury.totalContributions()).to.equal(1);
+      expect(await treasury.getContributionsCount()).to.equal(1n);
+      expect(await treasury.totalContributions()).to.equal(1n);
 
       const contribution = await treasury.getContribution(0);
       expect(contribution.contributor).to.equal(contributor1.address);
@@ -137,7 +137,7 @@ describe("TreasuryVault", function () {
         value: depositAmount,
       });
 
-      expect(await treasury.getContributionsCount()).to.equal(2);
+      expect(await treasury.getContributionsCount()).to.equal(2n);
       expect(await treasury.totalContributedByAddress(contributor1.address)).to.equal(
         depositAmount * 2n
       );
@@ -152,7 +152,7 @@ describe("TreasuryVault", function () {
         value: depositAmount,
       });
 
-      expect(await treasury.getContributionsCount()).to.equal(2);
+      expect(await treasury.getContributionsCount()).to.equal(2n);
       expect(await treasury.getETHBalance()).to.equal(depositAmount * 2n);
     });
 
@@ -175,7 +175,7 @@ describe("TreasuryVault", function () {
       });
 
       expect(await treasury.getETHBalance()).to.equal(depositAmount);
-      expect(await treasury.getContributionsCount()).to.equal(1);
+      expect(await treasury.getContributionsCount()).to.equal(1n);
 
       const contribution = await treasury.getContribution(0);
       expect(contribution.contributorName).to.equal("Anonymous");
@@ -259,7 +259,7 @@ describe("TreasuryVault", function () {
     });
 
     it("Should return correct contributions count", async function () {
-      expect(await treasury.getContributionsCount()).to.equal(2);
+      expect(await treasury.getContributionsCount()).to.equal(2n);
     });
 
     it("Should return all contributions", async function () {

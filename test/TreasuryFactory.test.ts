@@ -46,8 +46,8 @@ describe("TreasuryFactory", function () {
     });
 
     it("Should start with zero treasuries", async function () {
-      expect(await factory.totalTreasuriesCreated()).to.equal(0);
-      expect(await factory.getTotalTreasuries()).to.equal(0);
+      expect(await factory.totalTreasuriesCreated()).to.equal(0n);
+      expect(await factory.getTotalTreasuries()).to.equal(0n);
     });
   });
 
@@ -56,7 +56,7 @@ describe("TreasuryFactory", function () {
       const tx = await factory.connect(parent1).createTreasury(childName1, birthDate);
       const receipt = await tx.wait();
 
-      expect(await factory.totalTreasuriesCreated()).to.equal(1);
+      expect(await factory.totalTreasuriesCreated()).to.equal(1n);
     });
 
     it("Should emit TreasuryCreated event", async function () {
@@ -92,7 +92,7 @@ describe("TreasuryFactory", function () {
       const treasury = await ethers.getContractAt("TreasuryVault", treasuryAddress);
 
       expect(await treasury.childName()).to.equal(childName1);
-      expect(await treasury.birthDate()).to.equal(birthDate);
+      expect(await treasury.birthDate()).to.equal(BigInt(birthDate));
     });
 
     it("Should track treasury in factory", async function () {
@@ -106,17 +106,17 @@ describe("TreasuryFactory", function () {
       await factory.connect(parent1).createTreasury(childName1, birthDate);
       await factory.connect(parent1).createTreasury(childName2, birthDate);
 
-      expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(2);
-      expect(await factory.totalTreasuriesCreated()).to.equal(2);
+      expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(2n);
+      expect(await factory.totalTreasuriesCreated()).to.equal(2n);
     });
 
     it("Should track treasuries per user correctly", async function () {
       await factory.connect(parent1).createTreasury(childName1, birthDate);
       await factory.connect(parent2).createTreasury(childName2, birthDate);
 
-      expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(1);
-      expect(await factory.getUserTreasuriesCount(parent2.address)).to.equal(1);
-      expect(await factory.totalTreasuriesCreated()).to.equal(2);
+      expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(1n);
+      expect(await factory.getUserTreasuriesCount(parent2.address)).to.equal(1n);
+      expect(await factory.totalTreasuriesCreated()).to.equal(2n);
     });
 
     it("Should revert if child name is empty", async function () {
@@ -150,8 +150,8 @@ describe("TreasuryFactory", function () {
     });
 
     it("Should return correct treasury count per user", async function () {
-      expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(2);
-      expect(await factory.getUserTreasuriesCount(parent2.address)).to.equal(1);
+      expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(2n);
+      expect(await factory.getUserTreasuriesCount(parent2.address)).to.equal(1n);
     });
 
     it("Should return all treasuries", async function () {
@@ -160,8 +160,8 @@ describe("TreasuryFactory", function () {
     });
 
     it("Should return correct total count", async function () {
-      expect(await factory.getTotalTreasuries()).to.equal(3);
-      expect(await factory.totalTreasuriesCreated()).to.equal(3);
+      expect(await factory.getTotalTreasuries()).to.equal(3n);
+      expect(await factory.totalTreasuriesCreated()).to.equal(3n);
     });
 
     it("Should get treasury by index", async function () {
@@ -206,7 +206,7 @@ describe("TreasuryFactory", function () {
       const details = await factory.getTreasuryDetails(treasuryAddress);
 
       expect(details.childName).to.equal(childName1);
-      expect(details.birthDate).to.equal(birthDate);
+      expect(details.birthDate).to.equal(BigInt(birthDate));
       expect(details.owner).to.equal(parent1.address);
       expect(details.ethBalance).to.equal(ethers.parseEther("1.0"));
     });
@@ -221,8 +221,8 @@ describe("TreasuryFactory", function () {
   describe("Factory Statistics", function () {
     it("Should return correct stats with no treasuries", async function () {
       const stats = await factory.getFactoryStats();
-      expect(stats.totalTreasuries).to.equal(0);
-      expect(stats.totalValueLocked).to.equal(0);
+      expect(stats.totalTreasuries).to.equal(0n);
+      expect(stats.totalValueLocked).to.equal(0n);
     });
 
     it("Should calculate total value locked correctly", async function () {
@@ -247,7 +247,7 @@ describe("TreasuryFactory", function () {
 
       // Check stats
       const stats = await factory.getFactoryStats();
-      expect(stats.totalTreasuries).to.equal(2);
+      expect(stats.totalTreasuries).to.equal(2n);
       expect(stats.totalValueLocked).to.equal(ethers.parseEther("3.0"));
     });
   });

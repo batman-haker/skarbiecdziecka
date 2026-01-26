@@ -11,7 +11,7 @@
  */
 
 import { ethers } from 'ethers'
-import TreasuryFactoryABI from '@/lib/contracts/TreasuryFactory.json'
+import TreasuryFactoryABI from '@/lib/contracts/TreasuryFactory.abi.json'
 import TreasuryVaultABI from '@/lib/contracts/TreasuryVault.json'
 
 // Contract addresses (from deployment)
@@ -46,13 +46,14 @@ export function getRelayWallet(): ethers.Wallet {
 
 /**
  * Get TreasuryFactory contract instance with relay wallet as signer
+ * Updated: Fixed ABI import
  */
 export function getTreasuryFactoryContract(): ethers.Contract {
   const wallet = getRelayWallet()
 
   const contract = new ethers.Contract(
     TREASURY_FACTORY_ADDRESS,
-    TreasuryFactoryABI.abi,
+    TreasuryFactoryABI,
     wallet
   )
 
@@ -132,7 +133,7 @@ export async function createTreasuryViaRelay(
 
     // Transfer ownership from relay wallet to user's wallet
     console.log('[Relay] Transferring ownership to user:', ownerAddress)
-    const treasuryContract = new ethers.Contract(treasuryAddress, TreasuryVaultABI.abi, wallet)
+    const treasuryContract = new ethers.Contract(treasuryAddress, TreasuryVaultABI, wallet)
 
     const transferTx = await treasuryContract.transferOwnership(ownerAddress)
     console.log('[Relay] Transfer ownership transaction sent:', transferTx.hash)
