@@ -371,16 +371,15 @@ export default function DashboardPage() {
               {treasuries.map((treasury) => (
                 <div
                   key={treasury.id}
-                  className="bg-gray-900/50 rounded-lg p-4 border border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer"
-                  onClick={() => router.push(`/treasury?address=${treasury.address}`)}
+                  className="bg-gray-900/50 rounded-lg p-4 border border-purple-500/20 hover:border-purple-500/40 transition-all"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="text-lg font-bold text-purple-400 font-mono mb-2">
-                        {treasury.childName}
+                      <h3 className="text-lg font-bold text-purple-400 font-mono mb-1">
+                        🎁 {treasury.childName}
                       </h3>
-                      <p className="text-xs text-gray-400 font-mono">
-                        {treasury.address}
+                      <p className="text-xs text-gray-500 font-mono">
+                        {treasury.address.slice(0, 10)}...{treasury.address.slice(-8)}
                       </p>
                     </div>
                     <div className="text-right">
@@ -391,6 +390,26 @@ export default function DashboardPage() {
                         {new Date(treasury.createdAt).toLocaleDateString()}
                       </p>
                     </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => router.push(`/treasury/${treasury.address}`)}
+                      className="flex-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 py-2 px-4 rounded-lg text-sm font-mono transition-all border border-purple-500/30"
+                    >
+                      👁 Zobacz skarbiec
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const link = `${window.location.origin}/treasury/${treasury.address}`;
+                        navigator.clipboard.writeText(link);
+                        setSuccess(`Link skopiowany: ${link.slice(0, 40)}...`);
+                        setTimeout(() => setSuccess(''), 3000);
+                      }}
+                      className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 py-2 px-4 rounded-lg text-sm font-mono transition-all border border-cyan-500/30"
+                    >
+                      🔗 Udostępnij
+                    </button>
                   </div>
                 </div>
               ))}
