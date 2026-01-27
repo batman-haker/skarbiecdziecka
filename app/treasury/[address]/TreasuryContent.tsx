@@ -96,6 +96,13 @@ export default function TreasuryContent() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
 
+  // Wallet management state (off-ramp & send)
+  const [showWalletManager, setShowWalletManager] = useState(false);
+  const [showSendForm, setShowSendForm] = useState(false);
+  const [sendAddress, setSendAddress] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendSuccess, setSendSuccess] = useState(false);
+
   // Privy hooks - for logged in users (parent/owner)
   const { ready: privyReady, authenticated: privyAuthenticated, login: privyLogin } = usePrivy();
   const { wallets: privyWallets } = useWallets();
@@ -111,6 +118,13 @@ export default function TreasuryContent() {
   // Separate hooks for withdraw operations
   const { writeContract: writeWithdraw, data: withdrawHash, isPending: isWithdrawPending } = useWriteContract();
   const { isLoading: isWithdrawConfirming, isSuccess: isWithdrawSuccess } = useWaitForTransactionReceipt({ hash: withdrawHash });
+
+  // Hook for sending ETH from Privy wallet
+  const { writeContract: writeSend, data: sendHash, isPending: isSendPending } = useWriteContract();
+  const { isLoading: isSendConfirming, isSuccess: isSendSuccess } = useWaitForTransactionReceipt({ hash: sendHash });
+
+  // Read Privy wallet balance (native ETH)
+  const [privyWalletBalance, setPrivyWalletBalance] = useState<string>('0');
 
   // Read treasury data - MUST specify chainId for Base Sepolia
   const { data: childName, isError: childNameError, isLoading: childNameLoading, isFetching: childNameFetching } = useReadContract({
@@ -242,9 +256,53 @@ export default function TreasuryContent() {
       setTimeout(() => {
         refetchBalance();
         setWithdrawSuccess(false);
+        fetchPrivyBalance(); // Refresh Privy wallet balance after withdraw
       }, 3000);
     }
   }, [isWithdrawSuccess, refetchBalance]);
+
+  // Reset after successful send
+  useEffect(() => {
+    if (isSendSuccess) {
+      setSendSuccess(true);
+      setSendAddress('');
+      setSendAmount('');
+      setTimeout(() => {
+        setSendSuccess(false);
+        fetchPrivyBalance(); // Refresh balance after send
+      }, 3000);
+    }
+  }, [isSendSuccess]);
+
+  // Fetch Privy wallet balance
+  const fetchPrivyBalance = async () => {
+    if (privyWallets.length > 0) {
+      try {
+        const wallet = privyWallets[0];
+        const provider = await wallet.getEthereumProvider();
+        const balance = await provider.request({
+          method: 'eth_getBalance',
+          params: [wallet.address, 'latest'],
+        });
+        // Convert hex to ETH
+        const balanceInWei = BigInt(balance as string);
+        const balanceInEth = formatEther(balanceInWei);
+        setPrivyWalletBalance(balanceInEth);
+      } catch (error) {
+        console.error('Error fetching Privy balance:', error);
+      }
+    }
+  };
+
+  // Fetch Privy balance on mount and when wallet changes
+  useEffect(() => {
+    if (privyAuthenticated && privyWallets.length > 0) {
+      fetchPrivyBalance();
+      // Refresh every 30 seconds
+      const interval = setInterval(fetchPrivyBalance, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [privyAuthenticated, privyWallets]);
 
   // Copy address
   const copyAddress = () => {
@@ -328,6 +386,66 @@ export default function TreasuryContent() {
       console.error('Withdraw all error:', error);
       alert('Wystąpił błąd wypłaty! Sprawdź console.');
     }
+  };
+
+  // Handle send ETH from Privy wallet to external address
+  const handleSendETH = async () => {
+    if (!sendAddress || !isAddress(sendAddress)) {
+      alert('Wpisz poprawny adres portfela!');
+      return;
+    }
+    if (!sendAmount || parseFloat(sendAmount) <= 0) {
+      alert('Wpisz poprawną kwotę!');
+      return;
+    }
+    if (parseFloat(sendAmount) > parseFloat(privyWalletBalance)) {
+      alert('Niewystarczające środki w portfelu!');
+      return;
+    }
+    if (privyWallets.length === 0) {
+      alert('Brak połączonego portfela Privy!');
+      return;
+    }
+
+    try {
+      const wallet = privyWallets[0];
+      const provider = await wallet.getEthereumProvider();
+
+      // Send transaction via Privy
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: wallet.address,
+          to: sendAddress,
+          value: '0x' + parseEther(sendAmount).toString(16),
+        }],
+      });
+
+      console.log('Send transaction hash:', txHash);
+      setSendSuccess(true);
+      setSendAddress('');
+      setSendAmount('');
+
+      // Refresh balance after a delay
+      setTimeout(() => {
+        fetchPrivyBalance();
+        setSendSuccess(false);
+      }, 5000);
+    } catch (error) {
+      console.error('Send ETH error:', error);
+      alert('Wystąpił błąd wysyłania! Sprawdź console.');
+    }
+  };
+
+  // Open Ramp off-ramp widget
+  const openRampOfframp = () => {
+    if (!privyWalletAddress) {
+      alert('Brak portfela Privy!');
+      return;
+    }
+    // Ramp Network off-ramp URL with user's wallet address pre-filled
+    const rampUrl = `https://app.ramp.network/sell?hostApiKey=YOUR_RAMP_API_KEY&userAddress=${privyWalletAddress}&swapAsset=BASE_ETH&fiatCurrency=PLN&fiatValue=100`;
+    window.open(rampUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Invalid address
@@ -689,6 +807,115 @@ export default function TreasuryContent() {
                   </p>
                 </div>
               )}
+
+              {/* Wallet Management Section */}
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <h3 className="text-lg font-bold text-cyan-400 mb-3">Twój portfel Privy</h3>
+                <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-gray-400 text-sm">Saldo portfela</p>
+                      <p className="text-2xl font-bold text-white">{parseFloat(privyWalletBalance).toFixed(4)} ETH</p>
+                      <p className="text-gray-500 text-xs">
+                        ~{(parseFloat(privyWalletBalance) * 10000).toFixed(0)} PLN
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-500 text-xs">Adres portfela</p>
+                      <p className="text-cyan-400 text-xs font-mono">
+                        {privyWalletAddress?.slice(0, 8)}...{privyWalletAddress?.slice(-6)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button
+                    onClick={openRampOfframp}
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    💵 Wypłać do PLN
+                  </button>
+                  <button
+                    onClick={() => setShowSendForm(!showSendForm)}
+                    className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    📤 Wyślij na adres
+                  </button>
+                </div>
+
+                <p className="text-gray-500 text-xs text-center mb-4">
+                  Wypłać do PLN przez Ramp Network lub wyślij ETH na giełdę/MetaMask
+                </p>
+
+                {/* Send to Address Form */}
+                {showSendForm && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mt-4">
+                    <h4 className="text-blue-400 font-bold mb-3">Wyślij ETH na zewnętrzny adres</h4>
+                    <p className="text-gray-400 text-xs mb-3">
+                      Wyślij ETH na giełdę (Zonda, Binance) lub do MetaMask
+                    </p>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-gray-400 text-xs mb-1">Adres odbiorcy</label>
+                        <input
+                          type="text"
+                          value={sendAddress}
+                          onChange={(e) => setSendAddress(e.target.value)}
+                          placeholder="0x..."
+                          className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-gray-400 text-xs mb-1">Kwota (ETH)</label>
+                        <div className="flex gap-2 mb-2">
+                          {[0.25, 0.5, 0.75, 1].map((percent) => {
+                            const amount = (parseFloat(privyWalletBalance) * percent).toFixed(4);
+                            return (
+                              <button
+                                key={percent}
+                                onClick={() => setSendAmount(amount)}
+                                className={`flex-1 py-1 rounded text-xs font-medium transition-all ${
+                                  sendAmount === amount
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                              >
+                                {Math.round(percent * 100)}%
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={sendAmount}
+                          onChange={(e) => setSendAmount(e.target.value)}
+                          placeholder="0.0"
+                          className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleSendETH}
+                        disabled={!sendAddress || !sendAmount}
+                        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50 text-sm"
+                      >
+                        📤 Wyślij {sendAmount || '0'} ETH
+                      </button>
+
+                      {sendSuccess && (
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-center">
+                          <p className="text-green-400 text-sm font-bold">✓ Wysłano!</p>
+                          <p className="text-gray-400 text-xs">Transakcja została wysłana</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

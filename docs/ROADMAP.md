@@ -424,6 +424,93 @@ Questions to decide before implementation:
 
 ---
 
+---
+
+## 💎 Phase 9: Multi-Asset Portfolio (Future)
+
+**Goal**: Rodzice mogą ustawić skład portfela zamiast trzymać 100% ETH
+
+### Opis funkcjonalności
+Rodzic definiuje proporcje, np.:
+- 33% BTC (WBTC)
+- 33% ETH
+- 34% USDC (stablecoin)
+
+Gdy ktoś wpłaci ETH/PLN, system automatycznie kupuje tokeny według proporcji.
+
+### Techniczne opcje implementacji
+
+#### Opcja A: On-chain swaps (w pełni zdecentralizowane)
+- Integracja z DEX (Uniswap/1inch na Base)
+- Smart contract wykonuje swapy automatycznie
+- Zalety: Pełna decentralizacja, trustless
+- Wady: Wysokie koszty gas, skomplikowane
+
+#### Opcja B: Backend swaps (prostsze)
+- Relay wallet monitoruje wpłaty
+- Backend wykonuje swapy przez 1inch API
+- Zalety: Tańsze, prostsze
+- Wady: Mniej zdecentralizowane
+
+#### Opcja C: Periodic rebalancing (najtańsze)
+- Zbieramy ETH, raz dziennie/tygodniowo rebalansujemy
+- Zalety: Najtańsze (mniej transakcji)
+- Wady: Mniejsza precyzja
+
+### Dostępne tokeny na Base
+- WBTC (Wrapped Bitcoin) - 0x...
+- ETH (native)
+- USDC (stablecoin) - 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+- cbETH (Coinbase staked ETH)
+- DAI (stablecoin)
+
+### Wymagane zmiany
+1. Nowy smart contract: `TreasuryVaultV2` z multi-asset support
+2. Integracja z 1inch API dla swapów
+3. UI do konfiguracji proporcji portfela
+4. Price feeds (Chainlink) do wyceny
+5. Dashboard pokazujący wartość w PLN/USD
+
+### Ryzyka do uwzględnienia
+- Slippage przy swapach (max 1-2%)
+- Impermanent loss (dla niestabilnych par)
+- Koszty gas przy małych wpłatach (min. próg?)
+- Kompleksowość UI dla użytkownika
+
+### Rekomendacja
+Zacząć od **Opcji B** (Backend swaps) z prostym UI:
+1. Rodzic wybiera preset: "Bezpieczny" (50% ETH, 50% USDC) lub "Wzrostowy" (50% ETH, 30% WBTC, 20% altcoins)
+2. Backend wykonuje swapy po każdej wpłacie powyżej 50 PLN
+3. Mniejsze wpłaty kumulujemy i rebalansujemy raz dziennie
+
+---
+
+## 📝 Backlog - Nowe pomysły (dodane 2025-01)
+
+### Wysokie priorytety
+- [ ] Historia wpłat - lista kto/kiedy/ile na stronie skarbca
+- [ ] Panel powiadomień dla rodzica (tabela już istnieje!)
+- [ ] Przycisk "Udostępnij" z QR kodem i linkiem do skopiowania
+- [ ] Cel oszczędnościowy - pasek postępu "X/10000 PLN na studia"
+
+### UX/UI
+- [ ] Mobile-friendly design (responsive)
+- [ ] Dashboard z wykresami wzrostu oszczędności
+- [ ] Dark mode
+
+### Techniczne
+- [ ] Weryfikacja kontraktu na Basescan
+- [ ] Naprawić warning MetaMask (@react-native-async-storage)
+- [ ] Rate limiting na API endpoints
+- [ ] Usunąć DEBUG section z TreasuryContent.tsx
+
+### Zaawansowane
+- [ ] Wpłaty cykliczne (Stripe subscriptions)
+- [ ] Powiadomienia email przy wpłatach (Resend/SendGrid)
+- [ ] Obsługa wielu dzieci/skarbców na jednym koncie
+
+---
+
 ## 🤝 Contributors Welcome
 
 Jeśli chcesz pomóc w development:
