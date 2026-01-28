@@ -26,6 +26,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createTreasuryViaRelay } from '@/lib/wallet/relay'
+import { generatePassphrase, hashPassphrase } from '@/lib/security/withdrawal-password'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -95,7 +96,12 @@ export async function POST(request: NextRequest) {
     console.log('[API] Child name:', childName)
     console.log('[API] Owner address:', ownerAddress)
 
-    // 5. Create treasury on blockchain using relay wallet
+    // 5. Generate withdrawal passphrase (4 words)
+    const withdrawalPassphrase = generatePassphrase()
+    const passphraseHash = await hashPassphrase(withdrawalPassphrase)
+    console.log('[API] Withdrawal passphrase generated (NOT logging actual passphrase for security)')
+
+    // 6. Create treasury on blockchain using relay wallet
     const { treasuryAddress, txHash } = await createTreasuryViaRelay(
       childName,
       childBirthDate,
@@ -105,7 +111,7 @@ export async function POST(request: NextRequest) {
     console.log('[API] Treasury created:', treasuryAddress)
     console.log('[API] Transaction:', txHash)
 
-    // 6. Save treasury to database
+    // 7. Save treasury to database with passphrase hash
     const { data: treasury, error: dbError } = await supabase
       .from('treasuries')
       .insert({
@@ -116,6 +122,7 @@ export async function POST(request: NextRequest) {
         owner_wallet_address: ownerAddress,
         total_eth_balance: 0,
         total_contributions_count: 0,
+        withdrawal_password_hash: passphraseHash, // Store HASH only!
       })
       .select()
       .single()
@@ -134,12 +141,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 7. Create notification
+    // 8. Create notification
     await supabase.from('notifications').insert({
       user_id: user.id,
       type: 'treasury_created',
       title: 'Skarbiec utworzony!',
-      message: `Skarbiec dla ${childName} został pomyślnie utworzony.`,
+      message: `Skarbiec dla ${childName} został pomyślnie utworzony. WAŻNE: Zapisz hasło wypłaty!`,
       metadata: {
         treasury_id: treasury.id,
         treasury_address: treasuryAddress,
@@ -147,7 +154,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 8. Return success response
+    // 9. Return success response WITH passphrase (shown ONCE!)
+    // CRITICAL: This is the ONLY time the passphrase is returned to the user
+    // It is NOT stored in plain text anywhere - only the hash is in the database
     return NextResponse.json({
       success: true,
       treasury: {
@@ -160,6 +169,9 @@ export async function POST(request: NextRequest) {
         balance: '0',
         createdAt: treasury.created_at,
       },
+      // IMPORTANT: Show this to user ONCE and tell them to save it!
+      withdrawalPassphrase: withdrawalPassphrase,
+      securityWarning: 'ZAPISZ TO HASŁO! Będzie potrzebne do wypłaty środków. To hasło nie będzie już nigdy pokazane.',
     })
   } catch (error: any) {
     console.error('[API] Error creating treasury:', error)

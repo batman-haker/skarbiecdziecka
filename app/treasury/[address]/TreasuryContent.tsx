@@ -96,6 +96,12 @@ export default function TreasuryContent() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
 
+  // Withdrawal passphrase (2FA)
+  const [withdrawPassphrase, setWithdrawPassphrase] = useState('');
+  const [passphraseVerified, setPassphraseVerified] = useState(false);
+  const [passphraseError, setPassphraseError] = useState('');
+  const [verifyingPassphrase, setVerifyingPassphrase] = useState(false);
+
   // Wallet management state (off-ramp & send)
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showSendForm, setShowSendForm] = useState(false);
@@ -355,6 +361,10 @@ export default function TreasuryContent() {
       return;
     }
     if (!treasuryAddress) return;
+    if (!passphraseVerified) {
+      alert('Najpierw zweryfikuj hasło wypłaty!');
+      return;
+    }
 
     try {
       writeWithdraw({
@@ -373,6 +383,10 @@ export default function TreasuryContent() {
   // Handle withdraw all ETH
   const handleWithdrawAll = async () => {
     if (!treasuryAddress) return;
+    if (!passphraseVerified) {
+      alert('Najpierw zweryfikuj hasło wypłaty!');
+      return;
+    }
 
     try {
       writeWithdraw({
@@ -385,6 +399,43 @@ export default function TreasuryContent() {
     } catch (error) {
       console.error('Withdraw all error:', error);
       alert('Wystąpił błąd wypłaty! Sprawdź console.');
+    }
+  };
+
+  // Verify withdrawal passphrase (2FA)
+  const verifyWithdrawalPassphrase = async () => {
+    if (!withdrawPassphrase || withdrawPassphrase.length < 5) {
+      setPassphraseError('Wpisz hasło wypłaty (4 słowa oddzielone myślnikami)');
+      return;
+    }
+
+    setVerifyingPassphrase(true);
+    setPassphraseError('');
+
+    try {
+      const response = await fetch('/api/treasury/verify-withdrawal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          treasuryAddress: treasuryAddress,
+          passphrase: withdrawPassphrase.toLowerCase().trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.verified) {
+        setPassphraseVerified(true);
+        setPassphraseError('');
+      } else {
+        setPassphraseError(data.error || 'Nieprawidłowe hasło');
+        setPassphraseVerified(false);
+      }
+    } catch (error) {
+      console.error('Passphrase verification error:', error);
+      setPassphraseError('Błąd weryfikacji. Spróbuj ponownie.');
+    } finally {
+      setVerifyingPassphrase(false);
     }
   };
 
@@ -739,6 +790,42 @@ export default function TreasuryContent() {
               </p>
             </div>
 
+            {/* Passphrase Verification (2FA) */}
+            {!passphraseVerified ? (
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                <h3 className="text-purple-400 font-bold mb-2">🔐 Weryfikacja hasła wypłaty</h3>
+                <p className="text-gray-400 text-xs mb-3">
+                  Wpisz 4-słowne hasło otrzymane podczas tworzenia skarbca (np. kot-dom-słońce-rower)
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={withdrawPassphrase}
+                    onChange={(e) => setWithdrawPassphrase(e.target.value)}
+                    placeholder="słowo1-słowo2-słowo3-słowo4"
+                    className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    onClick={verifyWithdrawalPassphrase}
+                    disabled={verifyingPassphrase || !withdrawPassphrase}
+                    className="bg-purple-500 hover:bg-purple-600 text-white font-bold px-4 py-2 rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {verifyingPassphrase ? '⏳...' : 'Weryfikuj'}
+                  </button>
+                </div>
+                {passphraseError && (
+                  <p className="text-red-400 text-xs mt-2">{passphraseError}</p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-400 font-bold">✓ Hasło zweryfikowane</span>
+                  <span className="text-gray-400 text-xs">- możesz teraz wypłacić środki</span>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-2">Kwota do wypłaty (ETH)</label>
@@ -773,19 +860,21 @@ export default function TreasuryContent() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={handleWithdraw}
-                  disabled={isWithdrawPending || isWithdrawConfirming || !withdrawAmount}
+                  disabled={isWithdrawPending || isWithdrawConfirming || !withdrawAmount || !passphraseVerified}
                   className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50"
                 >
-                  {isWithdrawPending ? '⏳ Podpisywanie...' :
+                  {!passphraseVerified ? '🔒 Najpierw weryfikacja' :
+                   isWithdrawPending ? '⏳ Podpisywanie...' :
                    isWithdrawConfirming ? '⏳ Przetwarzanie...' :
                    `Wypłać ${withdrawAmount || '0'} ETH`}
                 </button>
                 <button
                   onClick={handleWithdrawAll}
-                  disabled={isWithdrawPending || isWithdrawConfirming || !balance || balance === 0n}
+                  disabled={isWithdrawPending || isWithdrawConfirming || !balance || balance === 0n || !passphraseVerified}
                   className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50"
                 >
-                  {isWithdrawPending ? '⏳...' :
+                  {!passphraseVerified ? '🔒' :
+                   isWithdrawPending ? '⏳...' :
                    isWithdrawConfirming ? '⏳...' :
                    '💸 Wypłać wszystko'}
                 </button>
