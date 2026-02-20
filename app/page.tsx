@@ -8,10 +8,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import NavHeader from '@/app/components/NavHeader';
 
 export default function HomePage() {
   const router = useRouter();
-  const { ready, authenticated, login, logout, user } = usePrivy();
+  const { ready, authenticated, logout, user } = usePrivy();
   const [treasuryAddress, setTreasuryAddress] = useState('');
 
   const handleGoToTreasury = () => {
@@ -22,48 +23,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-      {/* Navigation Header */}
-      <nav className="bg-gray-900/80 backdrop-blur-sm border-b border-purple-500/30 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🎁</span>
-              <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
-                Skarbiec Dziecka
-              </span>
-            </div>
-
-            {/* Nav Buttons */}
-            <div className="flex items-center gap-3">
-              {ready && authenticated ? (
-                <>
-                  <button
-                    onClick={() => router.push('/dashboard')}
-                    className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2"
-                  >
-                    <span>📊</span> Mój Dashboard
-                  </button>
-                  <button
-                    onClick={() => logout()}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg font-medium transition-all"
-                  >
-                    Wyloguj
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => login()}
-                  disabled={!ready}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-2 rounded-lg font-bold transition-all disabled:opacity-50"
-                >
-                  Zaloguj przez Google
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <NavHeader />
 
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Hero Section */}
@@ -90,11 +50,10 @@ export default function HomePage() {
               </button>
             ) : (
               <button
-                onClick={() => login()}
-                disabled={!ready}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all shadow-lg shadow-purple-500/30 disabled:opacity-50"
+                onClick={() => router.push('/auth/login')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all shadow-lg shadow-purple-500/30"
               >
-                🚀 Utwórz Skarbiec (Zaloguj się)
+                🚀 Utworz Skarbiec (Zaloguj sie)
               </button>
             )}
           </div>
@@ -187,11 +146,10 @@ export default function HomePage() {
               </button>
             ) : (
               <button
-                onClick={() => login()}
-                disabled={!ready}
-                className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:opacity-50"
+                onClick={() => router.push('/auth/login')}
+                className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition-all"
               >
-                🔐 Zaloguj się przez Google
+                🔐 Zaloguj sie przez Google
               </button>
             )}
           </div>

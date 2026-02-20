@@ -23,10 +23,18 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { sendWelcomeETH } from '@/lib/wallet/relay'
+import { rateLimit, RATE_LIMITS, getClientIp } from '@/lib/rate-limit'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = getClientIp(request)
+    const { success: rateLimitOk } = rateLimit(ip, 'sync-wallet', RATE_LIMITS.syncWallet)
+    if (!rateLimitOk) {
+      return NextResponse.json({ error: 'Zbyt wiele prob. Poczekaj minute.' }, { status: 429 })
+    }
+
     // 1. Verify authentication
     const supabase = await createClient()
     const {

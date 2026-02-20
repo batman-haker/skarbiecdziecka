@@ -8,6 +8,7 @@ import { formatEther, parseEther, isAddress } from 'viem';
 import { baseSepolia } from 'wagmi/chains';
 import QRCode from 'qrcode';
 import TreasuryVaultABI from '@/lib/contracts/TreasuryVault.json';
+import NavHeader from '@/app/components/NavHeader';
 
 // Emojis dla różnych wpłacających
 const CONTRIBUTOR_EMOJIS = ['👵', '👴', '👨', '👩', '🧑', '👦', '👧', '🧒', '👶'];
@@ -194,6 +195,29 @@ export default function TreasuryContent() {
     }
   });
 
+  // Read lock period data
+  const { data: lockUntil } = useReadContract({
+    address: treasuryAddress!,
+    abi: TreasuryVaultABI,
+    functionName: 'lockUntil',
+    chainId: baseSepolia.id,
+    query: {
+      enabled: !!treasuryAddress,
+      staleTime: 60000,
+    }
+  });
+
+  const { data: isLocked } = useReadContract({
+    address: treasuryAddress!,
+    abi: TreasuryVaultABI,
+    functionName: 'isLocked',
+    chainId: baseSepolia.id,
+    query: {
+      enabled: !!treasuryAddress,
+      staleTime: 30000,
+    }
+  });
+
   // Check if logged-in Privy user is the owner (parent)
   // Priority: Privy wallet (embedded) > MetaMask wallet
   const isOwner: boolean = Boolean(
@@ -230,11 +254,12 @@ export default function TreasuryContent() {
   // Calculate maturity date
   const maturityDate = birthDate ? new Date((Number(birthDate) + 18 * 365 * 24 * 60 * 60) * 1000) : null;
 
-  // Generate QR code
+  // Generate QR code with page URL (so scanning opens the treasury page)
   useEffect(() => {
-    if (treasuryAddress) {
-      QRCode.toDataURL(treasuryAddress, {
-        width: 200,
+    if (treasuryAddress && typeof window !== 'undefined') {
+      const pageUrl = `${window.location.origin}/treasury/${treasuryAddress}`;
+      QRCode.toDataURL(pageUrl, {
+        width: 300,
         margin: 2,
         color: { dark: '#06b6d4', light: '#1f2937' },
       }).then(setQrCodeUrl);
@@ -547,11 +572,12 @@ export default function TreasuryContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+      <NavHeader />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">🎁</div>
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mb-2">
             Skarbiec {childName ? String(childName) : '...'}
           </h1>
           {childAge !== null && (
@@ -563,9 +589,9 @@ export default function TreasuryContent() {
         </div>
 
         {/* Main Balance Card */}
-        <div className="bg-gradient-to-br from-green-500/20 to-cyan-500/20 rounded-xl border border-green-500/30 p-8 mb-8 text-center">
-          <p className="text-green-300 text-sm mb-2">Zebrane środki</p>
-          <p className="text-5xl font-bold text-white mb-2">
+        <div className="bg-gradient-to-br from-green-500/20 to-cyan-500/20 rounded-xl border border-green-500/30 p-6 sm:p-8 mb-8 text-center">
+          <p className="text-green-300 text-sm mb-2">Zebrane srodki</p>
+          <p className="text-3xl sm:text-5xl font-bold text-white mb-2">
             {balance ? formatEther(balance as bigint) : '0.0'} ETH
           </p>
           <p className="text-gray-400">
@@ -577,6 +603,26 @@ export default function TreasuryContent() {
             </p>
           )}
         </div>
+
+        {/* Lock Status Badge */}
+        {lockUntil !== undefined && lockUntil !== null && BigInt(String(lockUntil)) > 0n && (
+          <div className={`rounded-lg p-4 mb-4 ${isLocked ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{isLocked ? '🔒' : '🔓'}</span>
+              <div>
+                <p className={`text-sm font-bold ${isLocked ? 'text-red-400' : 'text-green-400'}`}>
+                  {isLocked ? 'Srodki zablokowane' : 'Blokada wygasla - srodki dostepne!'}
+                </p>
+                <p className="text-gray-400 text-xs">
+                  {isLocked
+                    ? `Blokada do: ${new Date(Number(BigInt(String(lockUntil))) * 1000).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                    : `Blokada wygasla: ${new Date(Number(BigInt(String(lockUntil))) * 1000).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Owner Badge */}
         {isOwner && (
@@ -616,45 +662,38 @@ export default function TreasuryContent() {
           </div>
         )}
 
-        {/* DEBUG: Address comparison - remove in production */}
-        {privyAuthenticated && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 text-xs font-mono">
-            <p className="text-red-400 font-bold mb-2">🔧 DEBUG INFO (usuń w produkcji)</p>
-            <p className="text-gray-400">Privy auth: <span className="text-green-400">{privyAuthenticated ? 'TAK' : 'NIE'}</span></p>
-            <p className="text-gray-400">Twój wallet: <span className="text-cyan-400">{privyWalletAddress || 'brak'}</span></p>
-            <p className="text-gray-400">Owner skarbca: <span className="text-yellow-400">
-              {ownerLoading ? '⏳ ładowanie...' : ownerAddress ? String(ownerAddress) : '❌ błąd odczytu'}
-            </span></p>
-            <p className="text-gray-400">Match: <span className={isOwner ? 'text-green-400' : 'text-red-400'}>{isOwner ? 'TAK ✓' : 'NIE ✗'}</span></p>
-            {privyWalletAddress && ownerAddress && !isOwner && (
-              <p className="text-orange-400 mt-2">
-                ⚠️ Adresy nie pasują! Privy: {privyWalletAddress.toLowerCase().slice(0, 10)}... vs Owner: {String(ownerAddress).toLowerCase().slice(0, 10)}...
-              </p>
-            )}
-          </div>
-        )}
 
         {/* Action Buttons */}
-        <div className={`grid gap-4 mb-8 ${isOwner ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div className={`grid gap-3 sm:gap-4 mb-8 grid-cols-1 ${isOwner ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
           <button
             onClick={() => setShowDepositForm(!showDepositForm)}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-purple-500/30"
           >
-            💝 Wpłać na skarbiec
+            💝 Wplac na skarbiec
           </button>
           {isOwner && (
-            <button
-              onClick={() => setShowWithdrawForm(!showWithdrawForm)}
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-orange-500/30"
-            >
-              💰 Wypłać środki
-            </button>
+            isLocked ? (
+              <button
+                disabled
+                className="bg-gray-700 text-gray-400 font-bold py-4 px-6 rounded-xl cursor-not-allowed opacity-60"
+                title={`Srodki zablokowane do ${lockUntil ? new Date(Number(BigInt(String(lockUntil))) * 1000).toLocaleDateString('pl-PL') : '...'}`}
+              >
+                🔒 Zablokowane
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowWithdrawForm(!showWithdrawForm)}
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-orange-500/30"
+              >
+                💰 Wyplac srodki
+              </button>
+            )
           )}
           <button
             onClick={copyLink}
             className="bg-gray-800/80 hover:bg-gray-700/80 text-cyan-400 font-bold py-4 px-6 rounded-xl transition-all border border-cyan-500/30 hover:border-cyan-500/60"
           >
-            {copiedLink ? '✓ Skopiowano!' : '🔗 Udostępnij link'}
+            {copiedLink ? '✓ Skopiowano!' : '🔗 Udostepnij link'}
           </button>
         </div>
 
@@ -1009,27 +1048,72 @@ export default function TreasuryContent() {
           </div>
         )}
 
-        {/* QR Code & Address */}
-        <div className="bg-gray-800/50 rounded-xl border border-cyan-500/30 p-6 mb-8">
-          <h2 className="text-lg font-bold text-cyan-400 mb-4 text-center">Adres skarbca</h2>
+        {/* Share & QR Code Section */}
+        <div className="bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-xl border border-cyan-500/30 p-6 mb-8">
+          <h2 className="text-xl font-bold text-cyan-400 mb-2 text-center">
+            Wyslij ten link rodzinie!
+          </h2>
+          <p className="text-gray-400 text-sm text-center mb-6">
+            Kazdy moze wplacic na skarbiec {childName ? String(childName) : ''} przez ten link
+          </p>
 
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+          <div className="flex flex-col items-center gap-6">
+            {/* QR Code */}
             {qrCodeUrl && (
-              <div className="p-3 bg-gray-900 rounded-lg">
-                <img src={qrCodeUrl} alt="QR Code" className="w-40 h-40" />
+              <div className="p-4 bg-gray-900 rounded-xl border border-cyan-500/20">
+                <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48 sm:w-56 sm:h-56" />
               </div>
             )}
-            <div className="flex-1 text-center md:text-left">
-              <p className="text-gray-400 text-xs mb-2">Adres kontraktu (Base Sepolia)</p>
-              <p className="text-cyan-300 font-mono text-sm break-all mb-4">
-                {treasuryAddress}
-              </p>
+
+            {/* Share URL */}
+            <div className="w-full max-w-md">
+              <p className="text-gray-500 text-xs mb-2 text-center">Link do skarbca</p>
+              <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-cyan-300 font-mono text-xs break-all text-center">
+                {typeof window !== 'undefined' ? `${window.location.origin}/treasury/${treasuryAddress}` : `/treasury/${treasuryAddress}`}
+              </div>
+            </div>
+
+            {/* Share Buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-md">
+              <button
+                onClick={copyLink}
+                className="bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg text-sm transition-all flex flex-col items-center gap-1"
+              >
+                <span className="text-lg">{copiedLink ? '✓' : '📋'}</span>
+                <span className="text-xs">{copiedLink ? 'Skopiowano!' : 'Kopiuj link'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  const text = `Wplac na skarbiec ${childName ? String(childName) : 'dziecka'}! ${window.location.href}`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg text-sm transition-all flex flex-col items-center gap-1"
+              >
+                <span className="text-lg">💬</span>
+                <span className="text-xs">WhatsApp</span>
+              </button>
               <button
                 onClick={copyAddress}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-all"
+                className="bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg text-sm transition-all flex flex-col items-center gap-1"
               >
-                {copied ? '✓ Skopiowano!' : '📋 Kopiuj adres'}
+                <span className="text-lg">{copied ? '✓' : '🔗'}</span>
+                <span className="text-xs">{copied ? 'Skopiowano!' : 'Adres ETH'}</span>
               </button>
+              <button
+                onClick={() => window.print()}
+                className="bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg text-sm transition-all flex flex-col items-center gap-1"
+              >
+                <span className="text-lg">🖨</span>
+                <span className="text-xs">Drukuj QR</span>
+              </button>
+            </div>
+
+            {/* Contract address (smaller) */}
+            <div className="text-center">
+              <p className="text-gray-600 text-xs">Adres kontraktu (Base Sepolia)</p>
+              <p className="text-gray-500 font-mono text-xs break-all">
+                {treasuryAddress}
+              </p>
             </div>
           </div>
         </div>

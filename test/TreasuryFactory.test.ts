@@ -53,14 +53,14 @@ describe("TreasuryFactory", function () {
 
   describe("Creating Treasuries", function () {
     it("Should create a new treasury", async function () {
-      const tx = await factory.connect(parent1).createTreasury(childName1, birthDate);
+      const tx = await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
       const receipt = await tx.wait();
 
       expect(await factory.totalTreasuriesCreated()).to.equal(1n);
     });
 
     it("Should emit TreasuryCreated event", async function () {
-      const tx = await factory.connect(parent1).createTreasury(childName1, birthDate);
+      const tx = await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
       const receipt = await tx.wait();
 
       // Check that TreasuryCreated event was emitted
@@ -77,7 +77,7 @@ describe("TreasuryFactory", function () {
     });
 
     it("Should set the creator as owner of the treasury", async function () {
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
 
       const treasuryAddress = (await factory.getUserTreasuries(parent1.address))[0];
       const treasury = await ethers.getContractAt("TreasuryVault", treasuryAddress);
@@ -86,7 +86,7 @@ describe("TreasuryFactory", function () {
     });
 
     it("Should set correct child name and birth date", async function () {
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
 
       const treasuryAddress = (await factory.getUserTreasuries(parent1.address))[0];
       const treasury = await ethers.getContractAt("TreasuryVault", treasuryAddress);
@@ -96,23 +96,23 @@ describe("TreasuryFactory", function () {
     });
 
     it("Should track treasury in factory", async function () {
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
 
       const treasuryAddress = (await factory.getUserTreasuries(parent1.address))[0];
       expect(await factory.isFromThisFactory(treasuryAddress)).to.be.true;
     });
 
     it("Should allow creating multiple treasuries by same parent", async function () {
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
-      await factory.connect(parent1).createTreasury(childName2, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
+      await factory.connect(parent1).createTreasury(childName2, birthDate, 0);
 
       expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(2n);
       expect(await factory.totalTreasuriesCreated()).to.equal(2n);
     });
 
     it("Should track treasuries per user correctly", async function () {
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
-      await factory.connect(parent2).createTreasury(childName2, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
+      await factory.connect(parent2).createTreasury(childName2, birthDate, 0);
 
       expect(await factory.getUserTreasuriesCount(parent1.address)).to.equal(1n);
       expect(await factory.getUserTreasuriesCount(parent2.address)).to.equal(1n);
@@ -121,14 +121,14 @@ describe("TreasuryFactory", function () {
 
     it("Should revert if child name is empty", async function () {
       await expect(
-        factory.connect(parent1).createTreasury("", birthDate)
+        factory.connect(parent1).createTreasury("", birthDate, 0)
       ).to.be.revertedWith("Child name cannot be empty");
     });
 
     it("Should revert if birth date is in the future", async function () {
       const futureDate = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
       await expect(
-        factory.connect(parent1).createTreasury(childName1, futureDate)
+        factory.connect(parent1).createTreasury(childName1, futureDate, 0)
       ).to.be.revertedWith("Birth date cannot be in the future");
     });
   });
@@ -136,9 +136,9 @@ describe("TreasuryFactory", function () {
   describe("Retrieving Treasuries", function () {
     beforeEach(async function () {
       // Create some test treasuries
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
-      await factory.connect(parent1).createTreasury(childName2, birthDate);
-      await factory.connect(parent2).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
+      await factory.connect(parent1).createTreasury(childName2, birthDate, 0);
+      await factory.connect(parent2).createTreasury(childName1, birthDate, 0);
     });
 
     it("Should return all user treasuries", async function () {
@@ -192,7 +192,7 @@ describe("TreasuryFactory", function () {
     let treasuryAddress: string;
 
     beforeEach(async function () {
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
       treasuryAddress = (await factory.getUserTreasuries(parent1.address))[0];
 
       // Add some ETH to the treasury
@@ -209,6 +209,18 @@ describe("TreasuryFactory", function () {
       expect(details.birthDate).to.equal(BigInt(birthDate));
       expect(details.owner).to.equal(parent1.address);
       expect(details.ethBalance).to.equal(ethers.parseEther("1.0"));
+      expect(details.lockUntil).to.equal(0n);
+      expect(details.isLocked).to.be.false;
+    });
+
+    it("Should get treasury details with lock period", async function () {
+      const lockUntil = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60; // 1 year
+      await factory.connect(parent2).createTreasury(childName2, birthDate, lockUntil);
+      const lockedAddr = (await factory.getUserTreasuries(parent2.address))[0];
+
+      const details = await factory.getTreasuryDetails(lockedAddr);
+      expect(details.lockUntil).to.equal(BigInt(lockUntil));
+      expect(details.isLocked).to.be.true;
     });
 
     it("Should revert when getting details for non-factory treasury", async function () {
@@ -227,8 +239,8 @@ describe("TreasuryFactory", function () {
 
     it("Should calculate total value locked correctly", async function () {
       // Create two treasuries
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
-      await factory.connect(parent2).createTreasury(childName2, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
+      await factory.connect(parent2).createTreasury(childName2, birthDate, 0);
 
       const treasury1Address = (await factory.getUserTreasuries(parent1.address))[0];
       const treasury2Address = (await factory.getUserTreasuries(parent2.address))[0];
@@ -255,7 +267,7 @@ describe("TreasuryFactory", function () {
   describe("Integration Tests", function () {
     it("Should allow full lifecycle: create, deposit, withdraw", async function () {
       // 1. Parent creates treasury
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
       const treasuryAddress = (await factory.getUserTreasuries(parent1.address))[0];
       const treasury = await ethers.getContractAt("TreasuryVault", treasuryAddress);
 
@@ -276,7 +288,7 @@ describe("TreasuryFactory", function () {
 
     it("Should prevent non-owners from withdrawing", async function () {
       // Create treasury
-      await factory.connect(parent1).createTreasury(childName1, birthDate);
+      await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
       const treasuryAddress = (await factory.getUserTreasuries(parent1.address))[0];
       const treasury = await ethers.getContractAt("TreasuryVault", treasuryAddress);
 
@@ -294,7 +306,7 @@ describe("TreasuryFactory", function () {
 
   describe("Gas Optimization", function () {
     it("Should track gas usage for creating treasury", async function () {
-      const tx = await factory.connect(parent1).createTreasury(childName1, birthDate);
+      const tx = await factory.connect(parent1).createTreasury(childName1, birthDate, 0);
       const receipt = await tx.wait();
 
       console.log(`      Gas used for creating treasury: ${receipt?.gasUsed.toString()}`);
@@ -307,7 +319,7 @@ describe("TreasuryFactory", function () {
       // Create treasury
       const createTx = await factory
         .connect(parent1)
-        .createTreasury(childName1, birthDate);
+        .createTreasury(childName1, birthDate, 0);
       const createReceipt = await createTx.wait();
 
       // Get treasury and deposit

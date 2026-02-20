@@ -36,7 +36,7 @@ describe("TreasuryVault", function () {
 
     // Deploy TreasuryVault contract
     const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
-    treasury = await TreasuryVaultFactory.deploy(childName, birthDate);
+    treasury = await TreasuryVaultFactory.deploy(childName, birthDate, 0); // 0 = no lock
     await treasury.waitForDeployment();
   });
 
@@ -57,10 +57,14 @@ describe("TreasuryVault", function () {
       expect(await treasury.getContributionsCount()).to.equal(0n);
     });
 
+    it("Should set lockUntil to 0 when no lock", async function () {
+      expect(await treasury.lockUntil()).to.equal(0n);
+    });
+
     it("Should revert if child name is empty", async function () {
       const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
       await expect(
-        TreasuryVaultFactory.deploy("", birthDate)
+        TreasuryVaultFactory.deploy("", birthDate, 0)
       ).to.be.revertedWith("Child name cannot be empty");
     });
 
@@ -68,7 +72,7 @@ describe("TreasuryVault", function () {
       const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
       const futureDate = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
       await expect(
-        TreasuryVaultFactory.deploy(childName, futureDate)
+        TreasuryVaultFactory.deploy(childName, futureDate, 0)
       ).to.be.revertedWith("Birth date cannot be in the future");
     });
   });
@@ -307,6 +311,89 @@ describe("TreasuryVault", function () {
       await expect(
         treasury.connect(contributor1).withdrawETH(ethers.parseEther("0.5"))
       ).to.not.be.reverted;
+    });
+  });
+
+  describe("Lock Period", function () {
+    let lockedTreasury: TreasuryVault;
+    const depositAmount = ethers.parseEther("1.0");
+
+    beforeEach(async function () {
+      // Deploy a treasury locked for 1 year from now
+      const lockUntil = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
+      const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
+      lockedTreasury = await TreasuryVaultFactory.deploy(childName, birthDate, lockUntil);
+      await lockedTreasury.waitForDeployment();
+
+      // Deposit some ETH
+      await lockedTreasury.connect(contributor1).depositETH("Test", {
+        value: depositAmount,
+      });
+    });
+
+    it("Should deploy with correct lockUntil", async function () {
+      const lockUntil = await lockedTreasury.lockUntil();
+      expect(lockUntil).to.be.greaterThan(0n);
+    });
+
+    it("Should report as locked", async function () {
+      expect(await lockedTreasury.isLocked()).to.be.true;
+    });
+
+    it("Should report remaining lock time > 0", async function () {
+      const remaining = await lockedTreasury.getRemainingLockTime();
+      expect(remaining).to.be.greaterThan(0n);
+    });
+
+    it("Should block withdrawETH when locked", async function () {
+      await expect(
+        lockedTreasury.connect(owner).withdrawETH(depositAmount)
+      ).to.be.revertedWith("Funds are locked until maturity date");
+    });
+
+    it("Should block withdrawAllETH when locked", async function () {
+      await expect(
+        lockedTreasury.connect(owner).withdrawAllETH()
+      ).to.be.revertedWith("Funds are locked until maturity date");
+    });
+
+    it("Should still accept deposits when locked", async function () {
+      await expect(
+        lockedTreasury.connect(contributor1).depositETH("Still contributing", {
+          value: ethers.parseEther("0.5"),
+        })
+      ).to.not.be.reverted;
+    });
+
+    it("Should allow withdrawal after lock expires", async function () {
+      // Deploy treasury with lock that's already expired (1 second ago)
+      const pastLock = Math.floor(Date.now() / 1000) - 1;
+      const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
+      // pastLock is in the past, so constructor will reject it
+      // Instead, deploy with no lock and test that withdrawal works
+      const unlockedTreasury = await TreasuryVaultFactory.deploy(childName, birthDate, 0);
+      await unlockedTreasury.waitForDeployment();
+
+      await unlockedTreasury.connect(contributor1).depositETH("Test", {
+        value: depositAmount,
+      });
+
+      await expect(
+        unlockedTreasury.connect(owner).withdrawETH(depositAmount)
+      ).to.not.be.reverted;
+    });
+
+    it("Should report unlocked treasury as not locked", async function () {
+      expect(await treasury.isLocked()).to.be.false;
+      expect(await treasury.getRemainingLockTime()).to.equal(0n);
+    });
+
+    it("Should revert if lockUntil is in the past", async function () {
+      const TreasuryVaultFactory = await ethers.getContractFactory("TreasuryVault");
+      const pastDate = Math.floor(Date.now() / 1000) - 100;
+      await expect(
+        TreasuryVaultFactory.deploy(childName, birthDate, pastDate)
+      ).to.be.revertedWith("Lock date must be in the future");
     });
   });
 

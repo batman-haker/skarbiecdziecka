@@ -15,7 +15,7 @@ import TreasuryFactoryABI from '@/lib/contracts/TreasuryFactory.abi.json'
 import TreasuryVaultABI from '@/lib/contracts/TreasuryVault.json'
 
 // Contract addresses (from deployment)
-const TREASURY_FACTORY_ADDRESS = '0xF142387eB1EF4c0cE9Fd92C1A78919B134354387'
+const TREASURY_FACTORY_ADDRESS = '0x65857320e3b653769B83ad3DE58efB93637C9625'
 
 // Base Sepolia RPC
 const BASE_SEPOLIA_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://sepolia.base.org'
@@ -71,7 +71,8 @@ export function getTreasuryFactoryContract(): ethers.Contract {
 export async function createTreasuryViaRelay(
   childName: string,
   childBirthDate: number,
-  ownerAddress: string
+  ownerAddress: string,
+  lockUntil: number = 0
 ): Promise<{ treasuryAddress: string; txHash: string }> {
   try {
     // Get contract instance
@@ -98,7 +99,8 @@ export async function createTreasuryViaRelay(
     // Call createTreasury on factory contract
     // The relay wallet will pay for gas
     // Note: Contract sets owner as msg.sender (relay wallet), so we need to transfer ownership after
-    const tx = await factoryContract.createTreasury(childName, childBirthDate)
+    console.log('[Relay] Lock until:', lockUntil > 0 ? new Date(lockUntil * 1000).toISOString() : 'No lock')
+    const tx = await factoryContract.createTreasury(childName, childBirthDate, lockUntil)
 
     console.log('[Relay] Transaction sent:', tx.hash)
     console.log('[Relay] Waiting for confirmation...')
@@ -132,11 +134,48 @@ export async function createTreasuryViaRelay(
     console.log('[Relay] Treasury created at:', treasuryAddress)
 
     // Transfer ownership from relay wallet to user's wallet
+    // IMPORTANT: Wait a moment for RPC node to update nonce after first transaction
     console.log('[Relay] Transferring ownership to user:', ownerAddress)
+    console.log('[Relay] Waiting for RPC node to sync nonce...')
+
+    // Wait 2 seconds for the node to fully process the first transaction
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // Use 'pending' to include pending transactions in the nonce count
+    const currentNonce = await wallet.provider!.getTransactionCount(wallet.address, 'pending')
+    console.log('[Relay] Current nonce for transfer (pending):', currentNonce)
+
     const treasuryContract = new ethers.Contract(treasuryAddress, TreasuryVaultABI, wallet)
 
-    const transferTx = await treasuryContract.transferOwnership(ownerAddress)
-    console.log('[Relay] Transfer ownership transaction sent:', transferTx.hash)
+    // Retry logic in case of nonce issues
+    let transferTx
+    let retryCount = 0
+    const maxRetries = 3
+
+    while (retryCount < maxRetries) {
+      try {
+        const nonceToUse = currentNonce + retryCount
+        console.log('[Relay] Attempting transfer with nonce:', nonceToUse)
+
+        transferTx = await treasuryContract.transferOwnership(ownerAddress, {
+          nonce: nonceToUse,
+        })
+        console.log('[Relay] Transfer ownership transaction sent:', transferTx.hash)
+        break // Success, exit loop
+      } catch (nonceError: any) {
+        if (nonceError.message.includes('nonce') && retryCount < maxRetries - 1) {
+          console.log('[Relay] Nonce error, retrying with incremented nonce...')
+          retryCount++
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        } else {
+          throw nonceError
+        }
+      }
+    }
+
+    if (!transferTx) {
+      throw new Error('Failed to send transfer ownership transaction after retries')
+    }
 
     await transferTx.wait()
     console.log('[Relay] Ownership transferred successfully!')

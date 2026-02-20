@@ -49,7 +49,8 @@ contract TreasuryFactory {
         address indexed treasury,
         address indexed owner,
         string childName,
-        uint256 birthDate
+        uint256 birthDate,
+        uint256 lockUntil
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -60,27 +61,23 @@ contract TreasuryFactory {
      * @notice Create a new treasury vault for a child
      * @param childName Name of the child (e.g., "Zosia Kowalska")
      * @param birthDate Birth date as Unix timestamp
+     * @param lockUntil Timestamp until which funds are locked (0 = no lock)
      * @return Address of the newly created treasury
      *
      * @dev This function:
      *      1. Creates a new TreasuryVault contract
      *      2. Transfers ownership to msg.sender
      *      3. Records the treasury in our tracking system
-     *
-     * Example usage:
-     *   const birthDate = Math.floor(new Date('2020-01-15').getTime() / 1000);
-     *   await factory.createTreasury("Zosia Kowalska", birthDate);
      */
-    function createTreasury(string memory childName, uint256 birthDate)
+    function createTreasury(string memory childName, uint256 birthDate, uint256 lockUntil)
         external
         returns (address)
     {
         require(bytes(childName).length > 0, "Child name cannot be empty");
         require(birthDate <= block.timestamp, "Birth date cannot be in the future");
 
-        // Deploy new TreasuryVault contract
-        // Note: The factory becomes the initial owner, then we transfer ownership
-        TreasuryVault treasury = new TreasuryVault(childName, birthDate);
+        // Deploy new TreasuryVault contract with lock period
+        TreasuryVault treasury = new TreasuryVault(childName, birthDate, lockUntil);
 
         // Transfer ownership to the creator (parent)
         treasury.transferOwnership(msg.sender);
@@ -95,7 +92,7 @@ contract TreasuryFactory {
         totalTreasuriesCreated++;
 
         // Emit event for off-chain tracking
-        emit TreasuryCreated(treasuryAddress, msg.sender, childName, birthDate);
+        emit TreasuryCreated(treasuryAddress, msg.sender, childName, birthDate, lockUntil);
 
         return treasuryAddress;
     }
@@ -184,7 +181,9 @@ contract TreasuryFactory {
             string memory childName,
             uint256 birthDate,
             address owner,
-            uint256 ethBalance
+            uint256 ethBalance,
+            uint256 lockUntil,
+            bool isLocked
         )
     {
         require(isTreasuryFromFactory[treasuryAddress], "Treasury not from this factory");
@@ -195,6 +194,8 @@ contract TreasuryFactory {
         birthDate = treasury.birthDate();
         owner = treasury.owner();
         ethBalance = address(treasuryAddress).balance;
+        lockUntil = treasury.lockUntil();
+        isLocked = treasury.isLocked();
     }
 
     /**

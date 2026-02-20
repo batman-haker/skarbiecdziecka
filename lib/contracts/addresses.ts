@@ -13,7 +13,7 @@ export const CONTRACTS_LOCAL = {
 
 // Base Sepolia testnet ✅ DEPLOYED!
 export const CONTRACTS_BASE_SEPOLIA = {
-  TreasuryFactory: '0x7c038a44De3b8AD648856b64f605D82da462230f', // Deployed 2025-12-18
+  TreasuryFactory: '0x65857320e3b653769B83ad3DE58efB93637C9625', // Deployed 2026-02-09 (with lockUntil)
   chainId: 84532,
   rpcUrl: 'https://sepolia.base.org',
 } as const;

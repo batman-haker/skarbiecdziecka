@@ -1,6 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-ethers";
-import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-verify";
 import * as dotenv from "dotenv";
 
 // Load environment variables
@@ -62,6 +62,11 @@ const config: HardhatUserConfig = {
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts",
+  },
+
+  // Etherscan/Basescan verification (V2 API)
+  etherscan: {
+    apiKey: process.env.BASESCAN_API_KEY || "",
   },
 };
 

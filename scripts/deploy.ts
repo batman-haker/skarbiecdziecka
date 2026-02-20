@@ -90,7 +90,7 @@ async function main() {
       const testChildName = "Test Child";
       const testBirthDate = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60; // 1 year ago
 
-      const tx = await factory.createTreasury(testChildName, testBirthDate);
+      const tx = await factory.createTreasury(testChildName, testBirthDate, 0);
       const receipt = await tx.wait();
 
       // Get the created treasury address from the event

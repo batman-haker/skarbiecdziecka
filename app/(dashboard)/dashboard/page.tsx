@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import NavHeader from '@/app/components/NavHeader'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -29,9 +30,17 @@ export default function DashboardPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [childName, setChildName] = useState('')
   const [childBirthDate, setChildBirthDate] = useState('')
+  const [lockPeriod, setLockPeriod] = useState('0') // '0' = no lock
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // Passphrase modal (shown after treasury creation)
+  const [showPassphraseModal, setShowPassphraseModal] = useState(false)
+  const [createdPassphrase, setCreatedPassphrase] = useState('')
+  const [createdTreasuryAddress, setCreatedTreasuryAddress] = useState('')
+  const [passphraseCopied, setPassphraseCopied] = useState(false)
+  const [passphraseConfirmed, setPassphraseConfirmed] = useState(false)
 
   // Treasuries list
   const [treasuries, setTreasuries] = useState<any[]>([])
@@ -161,7 +170,31 @@ export default function DashboardPage() {
       // Convert date to Unix timestamp
       const birthDateUnix = Math.floor(new Date(childBirthDate).getTime() / 1000)
 
-      console.log('[Dashboard] Creating treasury...', { childName, birthDateUnix })
+      // Calculate lockUntil timestamp based on selected period
+      let lockUntil = 0
+      const now = Math.floor(Date.now() / 1000)
+      if (lockPeriod === '1m') {
+        lockUntil = now + 30 * 24 * 60 * 60 // 1 month
+      } else if (lockPeriod === '1y') {
+        lockUntil = now + 365 * 24 * 60 * 60 // 1 year
+      } else if (lockPeriod === '5y') {
+        lockUntil = now + 5 * 365 * 24 * 60 * 60 // 5 years
+      } else if (lockPeriod === '10y') {
+        lockUntil = now + 10 * 365 * 24 * 60 * 60 // 10 years
+      } else if (lockPeriod === '18') {
+        // Lock until child turns 18
+        const birthDateObj = new Date(childBirthDate)
+        const eighteenthBirthday = new Date(birthDateObj)
+        eighteenthBirthday.setFullYear(eighteenthBirthday.getFullYear() + 18)
+        lockUntil = Math.floor(eighteenthBirthday.getTime() / 1000)
+        if (lockUntil <= now) {
+          setError('Dziecko ma juz 18 lat - nie mozna ustawic blokady do 18 urodzin')
+          setCreating(false)
+          return
+        }
+      }
+
+      console.log('[Dashboard] Creating treasury...', { childName, birthDateUnix, lockUntil })
 
       const response = await fetch('/api/treasury/create', {
         method: 'POST',
@@ -169,6 +202,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           childName,
           childBirthDate: birthDateUnix,
+          lockUntil,
         }),
       })
 
@@ -182,17 +216,26 @@ export default function DashboardPage() {
         throw new Error(errorMsg)
       }
 
-      setSuccess(
-        `✅ Skarbiec utworzony! Address: ${data.treasury.address.slice(0, 10)}...`
-      )
+      // Store passphrase and show modal
+      console.log('[Dashboard] Passphrase received:', data.withdrawalPassphrase ? 'YES' : 'NO')
+      console.log('[Dashboard] Full response data:', JSON.stringify(data, null, 2))
+
+      if (data.withdrawalPassphrase) {
+        console.log('[Dashboard] Setting passphrase modal state...')
+        setCreatedPassphrase(data.withdrawalPassphrase)
+        setCreatedTreasuryAddress(data.treasury.address)
+        setShowPassphraseModal(true)
+        setPassphraseCopied(false)
+        setPassphraseConfirmed(false)
+        console.log('[Dashboard] Modal should now be visible!')
+      } else {
+        console.warn('[Dashboard] No passphrase in response!')
+        setSuccess(`✅ Skarbiec utworzony! Adres: ${data.treasury.address.slice(0, 10)}...`)
+      }
+
       setShowCreateForm(false)
       setChildName('')
       setChildBirthDate('')
-
-      // Reload treasuries
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
     } catch (err: any) {
       console.error('[Dashboard] Error creating treasury:', err)
       const errorMessage = err.message || 'Błąd podczas tworzenia skarbca'
@@ -224,6 +267,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+      <NavHeader />
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-12 text-center">
@@ -463,6 +507,29 @@ export default function DashboardPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-gray-400 font-mono text-sm mb-2">
+                    Blokada srodkow:
+                  </label>
+                  <select
+                    value={lockPeriod}
+                    onChange={(e) => setLockPeriod(e.target.value)}
+                    className="w-full bg-gray-900 border border-cyan-500/30 rounded px-4 py-3 text-cyan-300 font-mono focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="0">Bez blokady (wyplata w dowolnym momencie)</option>
+                    <option value="1m">1 miesiac</option>
+                    <option value="1y">1 rok</option>
+                    <option value="5y">5 lat</option>
+                    <option value="10y">10 lat</option>
+                    <option value="18">Do 18 urodzin dziecka</option>
+                  </select>
+                  {lockPeriod !== '0' && (
+                    <p className="text-xs text-yellow-400 font-mono mt-2">
+                      ⚠️ Po zablokowaniu nie bedzie mozliwa wyplata do czasu wygasniecia blokady!
+                    </p>
+                  )}
+                </div>
+
                 <div className="bg-cyan-500/5 border border-cyan-500/20 rounded p-4">
                   <p className="text-xs text-cyan-300 font-mono">
                     ℹ️ Skarbiec zostanie utworzony na blockchain Base Sepolia.
@@ -491,6 +558,96 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Passphrase Modal - CRITICAL: Shown once after treasury creation */}
+        {showPassphraseModal && createdPassphrase && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-lg border-2 border-yellow-500/50 shadow-2xl max-w-lg w-full p-8">
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">🔐</div>
+                <h2 className="text-2xl font-bold text-yellow-400 font-mono mb-2">
+                  ZAPISZ HASŁO WYPŁATY!
+                </h2>
+                <p className="text-red-400 font-mono text-sm">
+                  ⚠️ TO HASŁO NIE BĘDZIE JUŻ NIGDY POKAZANE!
+                </p>
+              </div>
+
+              <div className="bg-gray-900 rounded-lg p-6 mb-6 border border-yellow-500/30">
+                <p className="text-gray-400 text-xs font-mono mb-2 text-center">
+                  Twoje 4-słowne hasło wypłaty:
+                </p>
+                <div className="bg-yellow-500/10 border-2 border-yellow-500/50 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-yellow-300 font-mono tracking-wider">
+                    {createdPassphrase}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(createdPassphrase)
+                    setPassphraseCopied(true)
+                  }}
+                  className={`w-full mt-4 py-2 rounded-lg font-mono text-sm transition-all ${
+                    passphraseCopied
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30'
+                  }`}
+                >
+                  {passphraseCopied ? '✓ Skopiowano!' : '📋 Kopiuj hasło'}
+                </button>
+              </div>
+
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                <ul className="text-sm text-red-300 font-mono space-y-2">
+                  <li>• Zapisz to hasło w bezpiecznym miejscu</li>
+                  <li>• Będzie potrzebne do KAŻDEJ wypłaty</li>
+                  <li>• Bez hasła nie wypłacisz środków</li>
+                  <li>• Nie da się go odzyskać!</li>
+                </ul>
+              </div>
+
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={passphraseConfirmed}
+                    onChange={(e) => setPassphraseConfirmed(e.target.checked)}
+                    className="w-5 h-5 rounded border-yellow-500 bg-gray-900 text-yellow-500 focus:ring-yellow-500"
+                  />
+                  <span className="text-gray-300 font-mono text-sm">
+                    Zapisałem/am hasło i rozumiem, że nie będzie pokazane ponownie
+                  </span>
+                </label>
+
+                <button
+                  onClick={() => {
+                    if (passphraseConfirmed) {
+                      setShowPassphraseModal(false)
+                      setCreatedPassphrase('')
+                      setSuccess(`✅ Skarbiec utworzony! Adres: ${createdTreasuryAddress.slice(0, 10)}...`)
+                      // Reload treasuries after a delay
+                      setTimeout(() => {
+                        window.location.reload()
+                      }, 2000)
+                    }
+                  }}
+                  disabled={!passphraseConfirmed}
+                  className={`w-full py-3 rounded-lg font-bold font-mono transition-all ${
+                    passphraseConfirmed
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {passphraseConfirmed ? '✓ ROZUMIEM, ZAMKNIJ' : 'Potwierdź powyżej aby kontynuować'}
+                </button>
+              </div>
+
+              <p className="text-center text-gray-500 text-xs font-mono mt-4">
+                Skarbiec: {createdTreasuryAddress.slice(0, 10)}...{createdTreasuryAddress.slice(-6)}
+              </p>
             </div>
           </div>
         )}

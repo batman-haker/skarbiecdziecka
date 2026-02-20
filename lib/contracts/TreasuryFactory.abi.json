@@ -25,6 +25,12 @@
         "internalType": "uint256",
         "name": "birthDate",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "lockUntil",
+        "type": "uint256"
       }
     ],
     "name": "TreasuryCreated",
@@ -59,6 +65,11 @@
       {
         "internalType": "uint256",
         "name": "birthDate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lockUntil",
         "type": "uint256"
       }
     ],
@@ -165,6 +176,16 @@
         "internalType": "uint256",
         "name": "ethBalance",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lockUntil",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isLocked",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",

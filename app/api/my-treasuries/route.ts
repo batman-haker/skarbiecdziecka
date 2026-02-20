@@ -23,10 +23,18 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, RATE_LIMITS, getClientIp } from '@/lib/rate-limit'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = getClientIp(request)
+    const { success: rateLimitOk } = rateLimit(ip, 'my-treasuries', RATE_LIMITS.read)
+    if (!rateLimitOk) {
+      return NextResponse.json({ error: 'Zbyt wiele zapytan. Poczekaj minute.' }, { status: 429 })
+    }
+
     // 1. Verify authentication
     const supabase = await createClient()
     const {

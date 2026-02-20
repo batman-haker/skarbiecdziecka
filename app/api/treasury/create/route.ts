@@ -27,10 +27,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { createTreasuryViaRelay } from '@/lib/wallet/relay'
 import { generatePassphrase, hashPassphrase } from '@/lib/security/withdrawal-password'
+import { rateLimit, RATE_LIMITS, getClientIp } from '@/lib/rate-limit'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = getClientIp(request)
+    const { success: rateLimitOk } = rateLimit(ip, 'treasury/create', RATE_LIMITS.createTreasury)
+    if (!rateLimitOk) {
+      return NextResponse.json({ error: 'Zbyt wiele prob. Poczekaj 10 minut.' }, { status: 429 })
+    }
+
     // 1. Verify authentication
     const supabase = await createClient()
     const {
@@ -44,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json()
-    const { childName, childBirthDate } = body
+    const { childName, childBirthDate, lockUntil } = body
 
     // 3. Validate input
     if (!childName || typeof childName !== 'string') {
@@ -101,11 +109,15 @@ export async function POST(request: NextRequest) {
     const passphraseHash = await hashPassphrase(withdrawalPassphrase)
     console.log('[API] Withdrawal passphrase generated (NOT logging actual passphrase for security)')
 
+    // Validate lockUntil if provided
+    const parsedLockUntil = typeof lockUntil === 'number' && lockUntil > 0 ? lockUntil : 0
+
     // 6. Create treasury on blockchain using relay wallet
     const { treasuryAddress, txHash } = await createTreasuryViaRelay(
       childName,
       childBirthDate,
-      ownerAddress
+      ownerAddress,
+      parsedLockUntil
     )
 
     console.log('[API] Treasury created:', treasuryAddress)
@@ -122,6 +134,7 @@ export async function POST(request: NextRequest) {
         owner_wallet_address: ownerAddress,
         total_eth_balance: 0,
         total_contributions_count: 0,
+        lock_until: parsedLockUntil,
         withdrawal_password_hash: passphraseHash, // Store HASH only!
       })
       .select()
